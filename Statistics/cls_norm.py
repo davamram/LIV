@@ -40,7 +40,8 @@ def calculate_cls(data, lambda_h1, lambda_h0, sigma_h1, sigma_h0):
 
 data = [2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07]
 
-# Note that those values are not right. They will change after having perform the good simulation
+# Note that those values are not right. They will change after having performed the good simulation
+# I should look at a way of getting directly this from the yoda file. But it's not realy needed now (2 min of copy/paste) and will maybe never be so I don't want to waste time
 liv_sample = [9.776820e-09, 1.000000e-10, 9.776820e-09, 1.000000e-10, 1.000000e-10, 4.888410e-09, 9.776822e-09, 6.983444e-09, 1.527629e-08, 9.776821e-09, 8.310298e-08, 2.102017e-07, 1.371443e-05, 8.595660e-06, 8.823582e-07, 6.306050e-08]
 sm_sample = [1.132219e+00, 6.113484e-01, 3.190417e-01, 1.421000e-01, 5.346908e-02, 2.384420e-02, 1.092171e-02, 5.495240e-03, 2.086177e-03, 8.215948e-04, 3.935730e-04, 1.067489e-04, 4.660717e-05, 8.345068e-06, 2.044124e-09, 1.000000e-10]
 sm_sigma = [6.857301e-03, 5.022828e-03, 3.660636e-03, 1.712163e-03, 1.047693e-03, 6.920445e-04, 4.788883e-04, 2.770784e-04, 1.664748e-04, 9.603531e-05, 6.152758e-05, 3.085920e-05, 1.564777e-05, 5.001225e-06, 1.898107e-06, 1.000000e-10]
