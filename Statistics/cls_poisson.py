@@ -6,6 +6,7 @@ def calculate_likelihood(data, lambdas):
     for i, x in enumerate(data):
         likelihood *= poisson.pmf(round(x), round(lambdas[i]))
         print("x : ", x)
+        print("i : ",i)
         print("lambda : ", lambdas[i])
         print("pmf : ", poisson.pmf(round(x), round(lambdas[i])))
         print("likelihood : ", likelihood)
@@ -21,7 +22,8 @@ def calculate_test_statistic(data, lambda_h1, lambda_h0):
 
 def calculate_pvalue(data, lambda_h1, lambda_h0):
     observed_statistic = calculate_test_statistic(data, lambda_h1, lambda_h0)
-    p_value = 1 - poisson.sf(observed_statistic, 1)
+    p_value = 1 - poisson.sf(observed_statistic, 1) # This is the problem
+    print("poisson sf : ", poisson.sf(observed_statistic, 1))
     return p_value
 
 def calculate_cls(data, lambda_h1, lambda_h0):
@@ -46,5 +48,10 @@ data = [x * Energy_bin[i] * luminosity for i, x in enumerate(data)]
 liv_sample = [x * Energy_bin[i] * luminosity for i, x in enumerate(liv_sample)]
 sm_sample = [x * Energy_bin[i] * luminosity for i, x in enumerate(sm_sample)]
 
-cls = calculate_cls(data, liv_sample, sm_sample)
-print("CLs:", cls)
+#cls = calculate_cls(data, liv_sample, sm_sample)
+test_data=[11]
+test_h1=[11]
+test_h0=[10]
+cls_test = calculate_cls(test_data, test_h1, test_h0)
+# print("CLs:", cls)
+print("CLs_test:", cls_test)

@@ -13,9 +13,9 @@ Avant d'exécuter ce code, assurez-vous d'avoir les éléments suivants install�
 ## Instructions d'utilisation
 
 1. Clonez ce dépôt GitHub sur votre machine locale en utilisant la commande suivante :
-``` git clone https://github.com/davamram/RivetLIV ```
+``` git clone https://github.com/davamram/LIV ```
 2. Accédez au répertoire du dépôt cloné :
-``` cd RivetLIV ```
+``` cd LIV ```
 3. Compiler le code à l'aide des commandes rivet :
 ``` rivet-build TEST_ANALYSIS.cc lib/SelectPhoton.cc ```
 4. Exécutez le code en fournissant les fichiers de données d'entrée nécessaires :
