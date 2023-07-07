@@ -148,9 +148,9 @@ double* GenerateToyExperiment_MultiChannels(double* Ns, double* Nb, double* Ndat
 }
 
 void cls_multiBin(){
-    int n = 1;
-    double Ns[] = {8};
-    double Nb[] = {10};
-    double Ndata[] = {9};
+    int n = 2;
+    double Ns[] = {8, 7};
+    double Nb[] = {10, 10};
+    double Ndata[] = {9, 6};
     GenerateToyExperiment_MultiChannels(Ns, Nb, Ndata, n, 100000);
 }
