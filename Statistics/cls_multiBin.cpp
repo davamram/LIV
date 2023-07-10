@@ -39,6 +39,29 @@ double* GetPoissonDistribution(double mean, int ntrials){
   return P;
 }
 
+double* GetDataPoissonDistribution_Fluctuate(double N, double N_err, int ntrials){
+
+  double mean;
+
+  double N_fluctuated;
+
+  TRandom3* rnd = new TRandom3();
+  double* P = new double[ntrials];
+
+  for (int i=0; i<ntrials; i++){
+
+    N_fluctuated=0;
+    while (N_fluctuated<=0){
+      N_fluctuated = rnd->Gaus(N, N_err);
+    }
+
+    P[i] = rnd->PoissonD(N_fluctuated);
+
+  }
+
+  return P;
+}
+
 double CalcLikelihood(double n, double x){
 
   double l = exp(-x)*TMath::Power(x,n)/TMath::Gamma(n+1);
@@ -116,7 +139,7 @@ double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double*
 
 double* GenerateToyExperiment_MultiChannels(double* Ns, double* Nb, double* Ndata, int nChannels, int ntrials){
 
-  double result[6];
+  double result[3];
 
   double** GedankenExp_SBhyp = new double*[nChannels];
   double** GedankenExp_Bhyp = new double*[nChannels];
@@ -144,13 +167,56 @@ double* GenerateToyExperiment_MultiChannels(double* Ns, double* Nb, double* Ndat
   result[1] = CLb;
   result[2] = CLsb/CLb;
 
+  delete [] GedankenExp_SBhyp;
+  delete [] GedankenExp_Bhyp;
+
+  return result;
+}
+
+double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, double* Ns_err, double* Nb_err, double* Ndata, int nChannels, int ntrials){
+
+  double result[3];
+
+  double** GedankenExp_SBhyp = new double*[nChannels];
+  double** GedankenExp_Bhyp = new double*[nChannels];
+
+  for (int i=0; i<nChannels; i++){
+
+    GedankenExp_Bhyp[i] = GetDataPoissonDistribution_Fluctuate(Nb[i], Nb_err[i], ntrials);
+    GedankenExp_SBhyp[i] = GetDataPoissonDistribution_Fluctuate(Ns[i], Ns_err[i], ntrials);
+
+  }
+
+  TH1F* HistoGedankenExp_SBhyp = PlotGedankenExpMinus2LLR_MultiChannels("GedankenExp_SBhyp", GedankenExp_SBhyp, Ns, Nb, ntrials, nChannels);
+  TH1F* HistoGedankenExp_Bhyp = PlotGedankenExpMinus2LLR_MultiChannels("GedankenExp_Bhyp", GedankenExp_Bhyp, Ns, Nb, ntrials, nChannels);
+
+  cout << endl;
+
+  cout << "Experience avec Signal modifié (Fluctuation)"<<endl;
+  double CLsb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_SBhyp, Ns, Nb, Ndata, nChannels);
+  double CLb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_Bhyp, Ns, Nb, Ndata, nChannels);
+  cout << "CLb="<<CLb<<" S="<<GetSignificanceStandardDeviation(CLb)<<endl; //C'est le CLb observe dans les donnees S+B => a utiliser pour la significance
+  cout << "CLsb="<<CLsb<<endl;
+  cout << "CLs=CLsb/CLb="<<CLsb/CLb<<endl;
+
+  result[0] = CLsb;
+  result[1] = CLb;
+  result[2] = CLsb/CLb;
+
+  delete [] GedankenExp_SBhyp;
+  delete [] GedankenExp_Bhyp;
   return result;
 }
 
 void cls_multiBin(){
     int n = 2;
     double Ns[] = {8, 7};
+    double Ns_err[] = {1, 2};
     double Nb[] = {10, 10};
+    double Nb_err[] = {3, 4};
     double Ndata[] = {9, 6};
+    double Ndata_err[] = {3, 2};
+
     GenerateToyExperiment_MultiChannels(Ns, Nb, Ndata, n, 100000);
+    GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Ndata, n, 100000);
 }
