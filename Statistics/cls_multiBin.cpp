@@ -19,6 +19,7 @@
 #include <TVectorD.h>
 #include <TRandom3.h>
 #include <TError.h>
+#include <TMath.h>
 
 //#include <iostream>
 #include <string.h>
@@ -98,7 +99,7 @@ double GetSignificanceStandardDeviation(double alpha){
 
 TH1F* PlotGedankenExpMinus2LLR_MultiChannels(string Name, double** GedankenExp, double* Ns, double* Nb, int ntrials, int nChannels){
 
-  TH1F* GedankenExpMinus2LLR = new TH1F(Name.c_str(), Name.c_str(), 10000, -100, 100);
+  TH1F* GedankenExpMinus2LLR = new TH1F(Name.c_str(), Name.c_str(), 100000, -100, 100);
 
   double LLR=0;
   for (int i=0; i<ntrials; i++){
@@ -108,7 +109,6 @@ TH1F* PlotGedankenExpMinus2LLR_MultiChannels(string Name, double** GedankenExp, 
     }
     GedankenExpMinus2LLR->Fill(-2*LLR);
   }
-  //GedankenExpMinus2LLR->Rebin(10);
   double a = GedankenExpMinus2LLR->Integral();
   GedankenExpMinus2LLR->Scale(1/a);
 
@@ -116,9 +116,9 @@ TH1F* PlotGedankenExpMinus2LLR_MultiChannels(string Name, double** GedankenExp, 
 
 }
 
-double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double* Nb, double* Ndata, int nChannels, string name){
+double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double* Nb, double* Ndata, int nChannels, double &LLR_data, string name){
 
-  double LLR_data = 0;
+  LLR_data = 0;
   double LLR_formula = 0;
   for (int i=0; i<nChannels; i++){
   
@@ -126,10 +126,6 @@ double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double*
     
   }
 
-
-
-  cout << "\n****Saving histogram****"<<endl;
-  //HistoGedankenExp->Rebin(100);
   double xmin = HistoGedankenExp->GetXaxis()->GetXmin();
   double xmax = HistoGedankenExp->GetXaxis()->GetXmax();
   double binwidth = (xmax-xmin)/((double)HistoGedankenExp->GetNbinsX());
@@ -139,16 +135,112 @@ double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double*
 
   double CL = HistoGedankenExp->Integral(bin1, bin2);
 
-  TCanvas* c1 = new TCanvas("canvas", "Canvas", 800, 600);
-  HistoGedankenExp->Draw("HIST C");
-  // Add llr line
-  TLine* line1 = new TLine(LLR_data, 0, LLR_data, HistoGedankenExp->GetMaximum());
-  line1->SetLineColor(kRed);
-  line1->SetLineWidth(2);
-  line1->Draw("SAME");
-  c1->SaveAs(name.c_str());
+  return CL;
+}
+
+double ComputeCL_MultiChannels_hypB(TH1F* HistoGedankenExp, double* Ns, double* Nb, double* Ndata, int nChannels, double &LLR_data, string name){
+
+  LLR_data = 0;
+  double LLR_formula = 0;
+  for (int i=0; i<nChannels; i++){
+  
+    LLR_data += CalcLogLikelihoodRatio(Ndata[i], Ns[i], Nb[i]);
+    
+  }
+
+  double xmin = HistoGedankenExp->GetXaxis()->GetXmin();
+  double xmax = HistoGedankenExp->GetXaxis()->GetXmax();
+  double binwidth = (xmax-xmin)/((double)HistoGedankenExp->GetNbinsX());
+
+  int bin1 = (-2*LLR_data - xmin)/binwidth;
+
+  double CL = HistoGedankenExp->Integral(1, bin1);
 
   return CL;
+}
+
+void ColorBinsUp(TH1F* h1, TH1F*& h2, Double_t LLR, int color) {
+
+    h2 = (TH1F*)h1->Clone("h2");
+
+    // Color only what I want
+    int binLLR = h2->GetXaxis()->FindBin(LLR);
+    h2->GetXaxis()->SetRangeUser(LLR, h2->GetXaxis()->GetXmax());
+    h2->SetFillColor(kRed);
+    h2->SetLineColor(kRed);
+}
+void ColorBinsDown(TH1F* h1, TH1F*& h2, Double_t LLR, int color) {
+
+    h2 = (TH1F*)h1->Clone("h2");
+
+    // Color only what I want
+    h2->GetXaxis()->SetRangeUser(h2->GetXaxis()->GetXmin(), LLR);
+    h2->SetFillColor(kGreen);
+    h2->SetLineColor(kGreen);
+}
+
+void SetXrange(TH1F*& h){
+  int min=1;
+  int max=h->GetNbinsX();
+  double maxBin = h->GetMaximum();
+  for(int i=0; i<h->GetNbinsX();i++){
+    if(h->GetBinContent(i)>0.0001*maxBin){
+      min=i;
+      cout<<"min : "<<min<<endl;
+      break;
+    }
+  }
+  for(int i=h->GetNbinsX(); i>0;i--){
+    if(h->GetBinContent(i)>0.001*maxBin){
+      max=i;
+      cout<<"max : "<<max<<endl;
+      break;
+    }
+  }
+  h->GetXaxis()->SetRange(min,max);
+}
+
+void DrawHist(TH1F* hH0, TH1F* hH1, double LLR_data, string name){
+  // hH0->Rebin(100000/100);
+  // hH1->Rebin(100000/100);
+  hH0->SetTitle("Test Statistic");
+  TCanvas* c1 = new TCanvas("canvas", "Canvas", 800, 600);
+  double maxHist = TMath::Max(hH0->GetMaximum(), hH1->GetMaximum());
+  hH0->SetMaximum(1.3 * maxHist);
+  // I only do it for this one and not for the others. I could do a more sophisticated thing to take into account others but it is not very usefull
+  SetXrange(hH0);
+  hH0->SetLineColor(kBlue);
+  hH0->SetLineWidth(2);
+  hH1->SetLineColor(kViolet);
+  hH1->SetLineWidth(2);
+  hH0->Draw("HIST C");
+  hH1->Draw("HIST C SAME");
+
+  //color for LLR
+
+  TH1F* hH1_color;
+  TH1F* hH0_color;
+  ColorBinsUp(hH1, hH1_color, LLR_data, kRed);
+  ColorBinsDown(hH0, hH0_color, LLR_data, kGreen);
+  hH1_color->Draw("SAME C HIST");
+  hH0_color->Draw("SAME C HIST");
+
+  TLine* line1 = new TLine(LLR_data, 0, LLR_data, maxHist);
+  line1->SetLineColor(kBlack);
+  line1->SetLineWidth(2);
+  line1->Draw("SAME");
+
+  TLegend* legend = new TLegend(0.7, 0.7, 0.9, 0.9); // Coordonnées de la légende dans le canvas (x1, y1, x2, y2)
+  legend->AddEntry(hH0, "Expected for SM", "l"); // "l" signifie ligne, vous pouvez également utiliser "f" pour le remplissage
+  legend->AddEntry(hH1, "Expected for LIV", "l");
+  legend->AddEntry(hH0_color, "P(SM)", "f");
+  legend->AddEntry(hH1_color, "P(LIV)", "f");
+  legend->AddEntry(line1, "Observed (in SM-MC sample)", "l");
+  legend->Draw();
+
+
+
+  c1->SaveAs(name.c_str());
 }
 
 double* GenerateToyExperiment_MultiChannels(double* Ns, double* Nb, double* Ndata, int nChannels, int ntrials){
@@ -172,11 +264,14 @@ double* GenerateToyExperiment_MultiChannels(double* Ns, double* Nb, double* Ndat
   cout << "******************************"<<endl;
   cout << "Experience avec Signal modifié"<<endl;
   cout << "******************************"<<endl;
-  double CLsb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_SBhyp, Ns, Nb, Ndata, nChannels, "hSB.pdf");
+  double LLR_data;
+  double CLsb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_SBhyp, Ns, Nb, Ndata, nChannels, LLR_data, "hSB.pdf");
   cout << "CLsb="<<CLsb<<endl;
-  double CLb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_Bhyp, Ns, Nb, Ndata, nChannels, "hB.pdf");
+  double CLb = ComputeCL_MultiChannels_hypB(HistoGedankenExp_Bhyp, Ns, Nb, Ndata, nChannels, LLR_data, "hB.pdf");
   cout << "CLb="<<CLb<<" S="<<GetSignificanceStandardDeviation(CLb)<<endl; //C'est le CLb observe dans les donnees S+B => a utiliser pour la significance
   cout << "CLs=CLsb/CLb="<<CLsb/CLb<<endl;
+
+  DrawHist(HistoGedankenExp_Bhyp, HistoGedankenExp_SBhyp, LLR_data, "hCLs.pdf");
 
   result[0] = CLsb;
   result[1] = CLb;
@@ -209,11 +304,16 @@ double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, dou
   cout << "******************************"<<endl;
   cout << "Experience avec Signal modifié (Fluctuation)"<<endl;
   cout << "******************************"<<endl;
-  double CLsb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_SBhyp, Ns, Nb, Ndata, nChannels, "hSB_sys.pdf");
-  double CLb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_Bhyp, Ns, Nb, Ndata, nChannels, "hB_sys.pdf");
+  double LLR_data;
+  double CLsb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_SBhyp, Ns, Nb, Ndata, nChannels, LLR_data, "hSB_sys.pdf");
+  cout<<"LLR_data is "<<LLR_data<<endl;
+  double CLb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_Bhyp, Ns, Nb, Ndata, nChannels, LLR_data, "hB_sys.pdf");
+  cout<<"LLR_data is "<<LLR_data<<endl;
   cout << "CLb="<<CLb<<" S="<<GetSignificanceStandardDeviation(CLb)<<endl; //C'est le CLb observe dans les donnees S+B => a utiliser pour la significance
   cout << "CLsb="<<CLsb<<endl;
   cout << "CLs=CLsb/CLb="<<CLsb/CLb<<endl;
+
+  DrawHist(HistoGedankenExp_Bhyp, HistoGedankenExp_SBhyp, LLR_data, "hCLs.pdf");
 
   result[0] = CLsb;
   result[1] = CLb;
@@ -232,7 +332,7 @@ void cls_multiBin(){
     
     if(test){
       int n = 2;
-      double Ns[] = {8, 7};
+      double Ns[] = {9, 6};
       double Ns_err[] = {1, 2};
       double Nb[] = {10, 10};
       double Nb_err[] = {3, 4};
@@ -240,7 +340,7 @@ void cls_multiBin(){
       double Ndata_err[] = {3, 2};
 
       GenerateToyExperiment_MultiChannels(Ns, Nb, Nb, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
     }
     else{
       // double Ndata[] = {2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
@@ -276,7 +376,7 @@ void cls_multiBin(){
 
       }
       GenerateToyExperiment_MultiChannels(Ns, Nb, Nb, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
     }
 
     // GenerateToyExperiment_MultiChannels(Ns, Nb, Ndata, n, 100000);
