@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/amram/Logiciel/Rivet/Rivet-3.1.7/include",
+                "/home/amram/Logiciel/Rivet/HepMC3-3.2.4/include/HepMC3",
+                "/home/amram/Logiciel/Rivet/fastjet-3.4.0/include/fastjet"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "browse": {
+                "path": [
+                    "/home/amram/Logiciel/Rivet/Rivet-3.1.7/include/Rivet",
+                    "/home/amram/Logiciel/Rivet/HepMC3-3.2.4/include/HepMC3",
+                    "/home/amram/Logiciel/Rivet/fastjet-3.4.0/include/fastjet"
+                ]
+            }
+        }
+    ],
+    "version": 4
+}

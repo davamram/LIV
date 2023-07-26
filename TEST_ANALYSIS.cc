@@ -111,8 +111,8 @@ namespace Rivet {
       double TriggerEfficiency=1.00; //Efficacite de trigger pour un photon
 	    double IdentificationEfficiency=0.95; //Efficacite d'identification pour un photon
 	    double ReconstructionEfficiency=0.70; //Efficacite de reconstruction pour un photon
-      double sf = crossSection() / (picobarn * sumOfWeights()) * TriggerEfficiency * IdentificationEfficiency * ReconstructionEfficiency;
-      // double sf = crossSection() / (picobarn * sumOfWeights());
+      // double sf = crossSection() / (picobarn * sumOfWeights()) * TriggerEfficiency * IdentificationEfficiency * ReconstructionEfficiency;
+      double sf = crossSection() / (picobarn * sumOfWeights());
       for (size_t i = 0; i < _eta_bins.size()-1; ++i) {
         if (fuzzyEquals(_eta_bins[i], 1.37)) continue;
         scale(_h_Et_photon[i], sf);

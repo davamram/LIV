@@ -74,7 +74,6 @@ double CalcLogLikelihoodRatio(double Ndata, double Ns, double Nb){
 
   double lr;
   if (Nb>0) lr = CalcLikelihood(Ndata, Ns)/CalcLikelihood(Ndata, Nb);
-
   return log(lr);
 }
 
@@ -123,6 +122,7 @@ double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double*
   for (int i=0; i<nChannels; i++){
   
     LLR_data += CalcLogLikelihoodRatio(Ndata[i], Ns[i], Nb[i]);
+      cout<<"LLR step is : "<<LLR_data<<" with Ndata, Ns, Nb = "<<Ndata[i]<<" ; "<<Ns[i]<<" ; "<<Nb[i]<<endl;
     
   }
 
@@ -132,7 +132,7 @@ double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double*
 
   int bin1 = (-2*LLR_data - xmin)/binwidth;
   int bin2 = (xmax - xmin)/binwidth;
-
+  cout<<"LLR is : "<<LLR_data<<endl;
   double CL = HistoGedankenExp->Integral(bin1, bin2);
 
   return CL;
@@ -307,7 +307,7 @@ double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, dou
   double LLR_data;
   double CLsb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_SBhyp, Ns, Nb, Ndata, nChannels, LLR_data, "hSB_sys.pdf");
   cout<<"LLR_data is "<<LLR_data<<endl;
-  double CLb = ComputeCL_MultiChannels_hypSB(HistoGedankenExp_Bhyp, Ns, Nb, Ndata, nChannels, LLR_data, "hB_sys.pdf");
+  double CLb = ComputeCL_MultiChannels_hypB(HistoGedankenExp_Bhyp, Ns, Nb, Ndata, nChannels, LLR_data, "hB_sys.pdf");
   cout<<"LLR_data is "<<LLR_data<<endl;
   cout << "CLb="<<CLb<<" S="<<GetSignificanceStandardDeviation(CLb)<<endl; //C'est le CLb observe dans les donnees S+B => a utiliser pour la significance
   cout << "CLsb="<<CLsb<<endl;
@@ -325,7 +325,7 @@ double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, dou
 }
 
 void cls_multiBin(){
-    bool test = true;
+    bool test = false;
     int ntry=1000000;
     gErrorIgnoreLevel = kError;
     // Fill the pseudo-histograms
@@ -340,7 +340,7 @@ void cls_multiBin(){
       double Ndata_err[] = {3, 2};
 
       GenerateToyExperiment_MultiChannels(Ns, Nb, Nb, n, ntry);
-      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Nb_err, Nb_err, Nb, n, ntry);
     }
     else{
       // double Ndata[] = {2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
@@ -348,12 +348,24 @@ void cls_multiBin(){
       // double Nb_err[] = {3.682969e-09, 3.812235e-09, 1.392031e-09, 1.841484e-09, 1.392031e-09, 1.704883e-09, 2.088047e-09, 2.982924e-09, 4.489251e-09, 6.698586e-09, 1.218028e-08, 2.075701e-08, 5.633294e-08, 2.760972e-08, 7.937478e-09, 2.338654e-09};
       // double Ns[] = {3.937259e-09, 1.476472e-08, 1.968630e-09, 4.921574e-09, 2.952944e-09, 0.000000e+00, 5.905888e-09, 9.843147e-09, 1.814830e-08, 2.829905e-08, 7.382361e-08, 2.167133e-07, 1.407718e-05, 8.503187e-06, 8.052680e-07, 0.000000e+00};
       // double Ns_err[] = {3.682969e-09, 3.812235e-09, 1.392031e-09, 1.841484e-09, 1.392031e-09, 1.704883e-09, 2.088047e-09, 2.982924e-09, 4.489251e-09, 6.698586e-09, 1.218028e-08, 2.075701e-08, 5.633294e-08, 2.760972e-08, 7.629868e-09, 0.000000e+00};
-      int n = 5;
-      double Ndata[] = {2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
-      double Nb[] = {2.167133e-07, 1.407718e-05, 8.503187e-06, 8.722506e-07, 7.657968e-08};
-      double Nb_err[] = {2.075701e-08, 5.633294e-08, 2.760972e-08, 7.937478e-09, 2.338654e-09};
-      double Ns[] = {2.167133e-07, 1.407718e-05, 8.503187e-06, 8.052680e-07, 2.000000e-09};
-      double Ns_err[] = {2.075701e-08, 5.633294e-08, 2.760972e-08, 7.629868e-09, 0.000000e+00};
+      
+      // MadGraph numbers
+      // int n = 5;
+      // double Ndata[] = {2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
+      // double Nb[] = {2.167133e-07, 1.407718e-05, 8.503187e-06, 8.722506e-07, 7.657968e-08};
+      // double Nb_err[] = {2.075701e-08, 5.633294e-08, 2.760972e-08, 7.937478e-09, 2.338654e-09};
+      // double Ns[] = {2.167133e-07, 1.407718e-05, 8.503187e-06, 8.052680e-07, 2.000000e-09};
+      // double Ns_err[] = {2.075701e-08, 5.633294e-08, 2.760972e-08, 7.629868e-09, 0.000000e+00};
+
+
+      //Sherpa Numbers
+      int n = 3;
+      double Nb[] = {1.338734e-05, 1.266060e-06, 1.477964e-07};
+      double Ns_2500[] = {1.338734e-05, 1.266060e-06, 1.326916e-07};
+      double Ns_2250[] = {1.338734e-05, 1.248750e-06, 8.069736e-08};
+      double Ns_2000[] = {1.338734e-05, 1.101764e-06, 0.000000e+00};
+      double Ns_1750[] = {6.397680e-05, 1.881448e-07, 0.000000e+00};
+      double Ns_1500[] = {8.300885e-06, 0.000000e+00, 0.000000e+00};
 
 
       //Convert into a number of event
@@ -365,17 +377,46 @@ void cls_multiBin(){
       for(int i = 0; i<n; i++){
 
         factor = Energy_bin[i]*luminosity;
-        Ndata[i] *= factor;
-        cout<<"Ndata : "<<Ndata[i]<<endl;
+        // Ndata[i] *= factor;
+        // cout<<"Ndata : "<<Ndata[i]<<endl;
+        // Ns[i] *=  factor;
+        // cout<<"Ns : "<<Ns[i]<<endl;
         Nb[i] *=  factor;
         cout<<"Nb : "<<Nb[i]<<endl;
-        Ns[i] *= factor;
-        cout<<"Ns : "<<Ns[i]<<endl;
-        Nb_err[i] *= factor;
-        Ns_err[i] *= factor;
+        Ns_2500[i] *= factor;
+        cout<<"Ns_2500 : "<<Ns_2500[i]<<endl;
+        Ns_2250[i] *= factor;
+        cout<<"Ns_2250 : "<<Ns_2250[i]<<endl;
+        Ns_2000[i] *= factor;
+        cout<<"Ns_2000 : "<<Ns_2000[i]<<endl;
+        Ns_1750[i] *= factor;
+        cout<<"Ns_1750 : "<<Ns_1750[i]<<endl;
+        Ns_1500[i] *= factor;
+        cout<<"Ns_1500 : "<<Ns_1500[i]<<endl;
+        // Nb_err[i] *= factor;
+        // Ns_err[i] *= factor;
 
       }
-      GenerateToyExperiment_MultiChannels(Ns, Nb, Nb, n, ntry);
+      // cout<<"\n#### Results for Ns ####"<<endl;
+      // GenerateToyExperiment_MultiChannels(Ns, Nb, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      cout<<"\n#### Results for Nb ####"<<endl;
+      GenerateToyExperiment_MultiChannels(Nb, Nb, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      cout<<"\n#### Results for E=2500 ####"<<endl;
+      GenerateToyExperiment_MultiChannels(Ns_2500, Nb, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      cout<<"\n#### Results for E=2250 ####"<<endl;
+      GenerateToyExperiment_MultiChannels(Ns_2250, Nb, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      cout<<"\n#### Results for E=2000 ####"<<endl;
+      GenerateToyExperiment_MultiChannels(Ns_2000, Nb, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      cout<<"\n#### Results for E=1750 ####"<<endl;
+      GenerateToyExperiment_MultiChannels(Ns_1750, Nb, Nb, n, ntry);
+      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      cout<<"\n#### Results for E=1500 ####"<<endl;
+      GenerateToyExperiment_MultiChannels(Ns_1500, Nb, Nb, n, ntry);
       //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
     }
 
