@@ -9,7 +9,7 @@ double LIVParameter(int particule, Data d) //Revoie le parametre d'invariance de
 void initialize(Data &d) //Initialise les valeurs
 {
 	d.Identifier=0; //Indice de la particule dans Masses (ex : 0 pour un electron, 3 pour un quark up, etc.) 8 quark top ?
-	d.ThresholdEnergy=1750; //Energie seuil souhaitee pour la desintegration en GeV
+	d.ThresholdEnergy=2175; //Energie seuil souhaitee pour la desintegration en GeV
     d.mFermion=d.Masses[d.Identifier]; //Masse du fermion en GeV/c2
     d.KTr=LIVParameter(d.Identifier,d); //Parametre de violation de l'invariance de Lorentz //Ordre de grandeur : -1e-13 pour l'electron et -1e-2 pour le top
     d.hbar=1;
