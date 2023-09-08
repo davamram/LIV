@@ -33,6 +33,9 @@ namespace Rivet {
         int offset = i > 2? 0 : 1;
         book(_h_Et_photon[i] ,i + offset, 1, 1);
       }
+      book(_h["theta"], "h_theta", 100, -2*M_PI, 2*M_PI);
+      book(_h["phi"], "h_phi", 100, -M_PI, M_PI);
+      book(_h["mass"], "h_mass", 100, 0.0, 1000);
 
     }
 
@@ -56,8 +59,15 @@ namespace Rivet {
       if (photons.size() < 1)  vetoEvent;
       const Particle& leadingPhoton = photons[0];
       FourMomentum leadingMomentum = leadingPhoton.momentum();
+      FourMomentum Fermion;
+      FourMomentum AntiFermion;
       // Veto events that wouldn't survived if they were LIV, and look for a missID electron
-      if(HasSurvived(leadingMomentum)==0) vetoEvent;
+      if(HasSurvived(leadingMomentum, Fermion, AntiFermion)==0 || HasSurvived(leadingMomentum, Fermion, AntiFermion)==10){
+        _h["mass"]->fill((Fermion+AntiFermion).mass());
+        _h["theta"]->fill(Fermion.angle(AntiFermion));
+        
+      }
+      if(HasSurvived(leadingMomentum, Fermion, AntiFermion)==0) vetoEvent;
 
       // Veto events with photon in ECAL crack
       if (inRange(leadingMomentum.abseta(), 1.37, 1.56)) vetoEvent;
@@ -108,15 +118,18 @@ namespace Rivet {
 
     /// Normalise histograms etc., after the run
     void finalize() {
-      double TriggerEfficiency=1.00; //Efficacite de trigger pour un photon
-	    double IdentificationEfficiency=0.95; //Efficacite d'identification pour un photon
-	    double ReconstructionEfficiency=0.70; //Efficacite de reconstruction pour un photon
+      // double TriggerEfficiency=1.00; //Efficacite de trigger pour un photon
+	    // double IdentificationEfficiency=0.95; //Efficacite d'identification pour un photon
+	    // double ReconstructionEfficiency=0.70; //Efficacite de reconstruction pour un photon
       // double sf = crossSection() / (picobarn * sumOfWeights()) * TriggerEfficiency * IdentificationEfficiency * ReconstructionEfficiency;
       double sf = crossSection() / (picobarn * sumOfWeights());
       for (size_t i = 0; i < _eta_bins.size()-1; ++i) {
         if (fuzzyEquals(_eta_bins[i], 1.37)) continue;
         scale(_h_Et_photon[i], sf);
       }
+      scale(_h["theta"], sf);
+      scale(_h["phi"], sf);
+      scale(_h["mass"], sf);
     }
 
 
@@ -126,6 +139,8 @@ namespace Rivet {
 
     const vector<double> _eta_bins = {0.00, 0.60, 1.37, 1.56, 1.81, 2.37 };
     const vector<double> _eta_bins_areaoffset = {0.0, 1.5, 3.0};
+
+    map<string, Histo1DPtr> _h;
 
   };
 

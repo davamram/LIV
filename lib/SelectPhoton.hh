@@ -47,6 +47,6 @@ double costheta(double epart, double egamma, Data d);
 void normalize(double (&vec)[3]);
 void generatebase(double px, double py, double pz, double (&pun)[3], double (&pdeux)[3], double (&ptrois)[3]);
 double angle(double normphoton, double normfermion, double normantifermion, double cosangle);
-bool HasSurvived(Rivet::FourMomentum& leadingMomentum);
+int HasSurvived(Rivet::FourMomentum &momFermion, Rivet::FourMomentum &Fermion, Rivet::FourMomentum &AntiFermion);
 
 #endif

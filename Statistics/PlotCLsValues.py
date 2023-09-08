@@ -1,26 +1,24 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import interpolate
+from scipy.optimize import bisect
 
-def plot_and_fit():
-    # Les coordonnées des points mesurés
-    x_values = np.array([2300, 2250, 2225, 2210, 2200, 2175, 2150])
-    k_values = [1 / (1 - ((x ** 2) / (2 * 511e-6 ** 2))) for x in x_values]
-    y_values = np.array([0.258267, 0.186887, 0.168647, 0.126563, 0.0177835, 0.00588068, 0.00470678])
+def plot_and_fit(x_values, k_values, y_values):
 
-    # Ajustement linéaire (fit d'une droite)
+    # Fit linéaire
     coeffs = np.polyfit(x_values, y_values, 1)
 
-    # Extraire les coefficients de la droite
+    # Pour obtenir les coeffs de la droite
     slope, intercept = coeffs
 
-    # Trouver la valeur de x lorsque f(x) = 0.05 (y = 0.05)
+    # Trouver la valeur de x lorsque CLs = 0.05
     x_value_for_f_0_05 = (0.05 - intercept) / slope
 
-    # Tracer les points
+    # Tracer
     plt.figure(figsize=(8, 6))
     plt.scatter(x_values, y_values, color='blue', marker='o', s=50, label='CLs values')
 
-    # Tracer la droite ajustée
+    # Tracer la droite
     x_fit = np.linspace(min(x_values), max(x_values), 100)
     y_fit = np.polyval(coeffs, x_fit)
     plt.plot(x_fit, y_fit, color='red', label='Linear fit')
@@ -38,17 +36,17 @@ def plot_and_fit():
 
     coeffs = np.polyfit(k_values, y_values, 1)
     
-    # Extraire les coefficients de la droite
+    # Pour obtenir les coefficients de la droite
     slope, intercept = coeffs
 
-    # Trouver la valeur de x lorsque f(x) = 0.05 (y = 0.05)
+    # Trouver la valeur de x lorsque CLs = 0.05
     x_value_for_f_0_05 = (0.05 - intercept) / slope
 
-    # Tracer les points
+    # Tracer
     plt.figure(figsize=(8, 6))
     plt.scatter(k_values, y_values, color='blue', marker='o', s=50, label='CLs values')
 
-    # Tracer la droite ajustée
+    # Tracer la droite
     k_fit = np.linspace(min(k_values), max(k_values), 100)
     y_fit = np.polyval(coeffs, k_fit)
     plt.plot(k_fit, y_fit, color='red', label='Linear fit')
@@ -64,29 +62,66 @@ def plot_and_fit():
     plt.legend()
     plt.savefig('plot_fit_K.png')
     plt.show()
+    # Show the first cls point beneath 0.05
+    for x, y, k in zip(x_values, y_values, k_values):
+        if y < 0.05:
+            print("For CLs =", y, "(first point below 0.05), we have Eth =", x, "and kappa =", k)
+            break
 
-def plot_and_interpolate():
-    # Les coordonnées des points mesurés
-    x_values = np.array([2500, 2300, 2250, 2225, 2210, 2150])
-    y_values = np.array([0.764851, 0.258267, 0.186887, 0.168647, 0.126563, 0.00470678])
+def plot_and_interpolate(x, y):
+    interpolation = interpolate.interp1d(x, y, kind='linear')
+    x_new = np.linspace(x.min(), x.max(), 100)
+    k = np.array([1 / (1 - ((xi ** 2) / (2 * 511e-6 ** 2))) for xi in x])
+    k_new=np.linspace(k.min(), k.max(), 100)
+    y_new = interpolation(x_new)
 
-    # Créer une liste de valeurs x pour l'interpolation
-    x_fit = np.linspace(min(x_values), max(x_values), 100)
-
-    # Interpolation linéaire entre chaque paire de points
-    y_fit = np.interp(x_fit, x_values, y_values)
-
-    # Tracer les points mesurés et la courbe interpolée
-    plt.figure(figsize=(8, 6))
-    plt.scatter(x_values, y_values, color='blue', marker='o', s=50, label='Points mesurés')
-    plt.plot(x_fit, y_fit, color='red', label='Courbe interpolée')
+    def find_x(x):
+        return interpolation(x) - 0.05
     
-    plt.xlabel('X Values')
-    plt.ylabel('Y Values')
-    plt.title('Valeurs Mesurées et Interpolation Linéaire')
+    #For E
+
+    x_solution = bisect(find_x, x.min(), x.max())
+
+    plt.plot(x, y, 'o', label='CLs values')
+    plt.plot(x_new, y_new, '-', label='Interpolation')
+    plt.xlabel(r'$E_{tr}$')
+    plt.ylabel('CLs')
+    plt.title('Limit on Etr')
     plt.legend()
-    plt.grid(True)
+    plt.axhline(y=0.05, color='gray', linestyle='--')
+    plt.axvline(x=x_solution, color='green', linestyle='--')
+
+    #plt.text(2200, 0.06, r'$E_{tr} > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
+    plt.legend()
+    plt.savefig('plot_interpol_E.png')
     plt.show()
 
-#plot_and_interpolate()
-plot_and_fit()
+    # For Kappa
+    interpolation = interpolate.interp1d(k, y, kind='linear')
+    y_new = interpolation(k_new)
+
+    k_solution = 1 / (1 - ((x_solution ** 2) / (2 * 511e-6 ** 2)))
+
+    plt.plot(k, y, 'o', label='CLs values')
+    plt.plot(k_new, y_new, '-', label='Interpolation')
+    plt.xlabel(r'$\kappa$')
+    plt.ylabel('CLs')
+    plt.title('Limit on kappa')
+    plt.legend()
+    plt.axhline(y=0.05, color='gray', linestyle='--')
+    plt.axvline(x=k_solution, color='green', linestyle='--')
+
+    plt.text(-1.135e-13, 0.06, r'$\kappa > {:.3e}$'.format(k_solution), fontsize=12, color='purple', fontweight='bold')
+
+    #plt.text(2200, 0.06, r'$E_{tr} > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
+    plt.legend()
+    plt.savefig('plot_interpol_K.png')
+    plt.show()
+
+
+
+
+x_values = np.array([2300, 2250, 2225, 2210, 2200, 2175, 2150])
+
+y_values = np.array([0.258267, 0.186887, 0.168647, 0.126563, 0.0177835, 0.00588068, 0.00470678])
+plot_and_interpolate(x_values, y_values)

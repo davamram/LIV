@@ -8,8 +8,8 @@ double LIVParameter(int particule, Data d) //Revoie le parametre d'invariance de
 
 void initialize(Data &d) //Initialise les valeurs
 {
-	d.Identifier=0; //Indice de la particule dans Masses (ex : 0 pour un electron, 3 pour un quark up, etc.) 8 quark top ?
-	d.ThresholdEnergy=2175; //Energie seuil souhaitee pour la desintegration en GeV
+	d.Identifier=8; //Indice de la particule dans Masses (ex : 0 pour un electron, 3 pour un quark up, etc.) 8 quark top ?
+	d.ThresholdEnergy=2200; //Energie seuil souhaitee pour la desintegration en GeV
     d.mFermion=d.Masses[d.Identifier]; //Masse du fermion en GeV/c2
     d.KTr=LIVParameter(d.Identifier,d); //Parametre de violation de l'invariance de Lorentz //Ordre de grandeur : -1e-13 pour l'electron et -1e-2 pour le top
     d.hbar=1;
@@ -113,26 +113,27 @@ void generatebase(double px, double py, double pz, double (&pun)[3], double (&pd
 
 double angle(double normphoton, double normfermion, double normantifermion, double cosangle) //Renvoie l'angle entre PGamma et PFermion (angle alpha)
 {
+        if((normfermion+normantifermion*cosangle)/normphoton > 1) return 0; //This did not happened in ROOT, but here sometime I have cos(alpha)>1 (1.000001)
         return acos((normfermion+normantifermion*cosangle)/normphoton);
 }
 
 // Check if the photon has survived and if not, if the fermions created are reconstructed as photon. If so, the photon momentum become the fermion momentum
-bool HasSurvived(Rivet::FourMomentum &momFermion){
+int HasSurvived(Rivet::FourMomentum &momPhoton, Rivet::FourMomentum &Fermion, Rivet::FourMomentum &AntiFermion){
     Data d;
     initialize(d);
     // Only photon above Etresh would desintegrated in LIV
-    double E = momFermion.E();
+    double E = momPhoton.E();
     
     if(E<d.ThresholdEnergy) return 1;
 
     double EBasse = 0.5*(E-EBar(E,d)); //On determine les bornes d'intégration
     double EHaute = 0.5*(E+EBar(E,d));
     double Gamma = integrate(d, E, EBasse, EHaute);
-    // Initialisation de la graine pour le générateur de nombres aléatoires
-    srand(static_cast<unsigned int>(std::time(nullptr)));
+    // This is a problem : every number generated during the same second are the same. Need to find an other way
+    srand(static_cast<unsigned int>(std::time(0)));
     // Génération d'un nombre aléatoire entre 0 et 1
     double Draw = static_cast<double>(std::rand()) / RAND_MAX;
-    if(Draw<SurvivalProb(Gamma, d.Distance[d.Distance.size()-1])){
+    if(Draw<1-SurvivalProb(Gamma, d.Distance[d.Distance.size()-1])){
         
         double EFermion = rand()/RAND_MAX*(EHaute-EBasse)+EBasse;
         double EAntiFermion = E-EFermion;
@@ -143,34 +144,37 @@ bool HasSurvived(Rivet::FourMomentum &momFermion){
         double NormPGamma=DispersionRelationPhoton(E,d);
         double NormPFermion=DispersionRelationFermion(EFermion,d);
         double NormPAntiFermion=DispersionRelationFermion(EAntiFermion,d);
-        generatebase(momFermion.px(),momFermion.py(),momFermion.pz(),PGamma,PPerpendicular,P3);
+        generatebase(momPhoton.px(),momPhoton.py(),momPhoton.pz(),PGamma,PPerpendicular,P3);
         double cosangle=costheta(EFermion,E,d);
         double alpha=angle(NormPGamma,NormPFermion,NormPAntiFermion,cosangle);
         double phi=rand()*2*M_PI;
         for(int n=0;n<3;n++) //Reconstruction de PFermion
         {
             PFermion[n]=NormPFermion*(PGamma[n]*cos(alpha)+sin(alpha)*(cos(phi)*PPerpendicular[n]+sin(phi)*P3[n]));
+            // cout<<"PFermion "<<n<<" is : "<<PFermion[n]<<endl;
+            // cout<<NormPFermion<<" / "<<PGamma[n]<<" / "<<alpha<<" / "<<phi<<" / "<<PPerpendicular[n]<<" / "<<P3[n]<<endl;
+            // cout<<"***"<<endl;
             PAntiFermion[n]=(PGamma[n]*NormPGamma)-PFermion[n];
         }
-        Rivet::FourMomentum Fermion; Rivet::FourMomentum AntiFermion;
         Fermion.setXYZE(PFermion[0], PFermion[1], PFermion[2], EFermion);
-        Fermion.setXYZE(PAntiFermion[0], PAntiFermion[1], PAntiFermion[2], EAntiFermion);
+        AntiFermion.setXYZE(PAntiFermion[0], PAntiFermion[1], PAntiFermion[2], EAntiFermion);
         // Disintegration probability
         double desE = std::rand() / RAND_MAX;
         double desP = std::rand() / RAND_MAX;
 
         if(desE < 0.015 && desP<0.015 && Fermion.pT()>1000 && AntiFermion.pT()>1000){
-          momFermion = Fermion.pT() > AntiFermion.pT() ? Fermion : AntiFermion;
-          return 1;
+          momPhoton = Fermion.pT() > AntiFermion.pT() ? Fermion : AntiFermion;
+          return 10;
         }
         else if(desE < 0.015 && Fermion.pT()>1000){
-          momFermion = Fermion;
-          return 1;
+          momPhoton = Fermion;
+          return 10;
         }
         else if(desP < 0.015 && AntiFermion.pT()>1000){
-          momFermion = AntiFermion;
-          return 1;
+          momPhoton = AntiFermion;
+          return 10;
         }
+        return 0;
     }
-    return 0;
+    return 1;
 }
