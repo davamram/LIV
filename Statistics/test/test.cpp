@@ -35,18 +35,23 @@ Double_t ContinuousPoisson(Double_t *x, Double_t *params){
 Double_t PoissonCdf(Double_t *x, Double_t *params){
   Double_t A = params[0];
   Double_t arg = x[0];
-  return TMath::Gamma(arg+1, A)/TMath::Gamma(arg+1);
+  return ROOT::Math::inc_gamma_c(arg+1, A);
 }
 
 double GetContinuousPoissonCdf(double mean, double rand){
-  TF1 *f = new TF1("f", PoissonCdf, floor(mean/5), 5*ceil(mean), 1); // plutot faire en fonction des sigma
-  f->SetParameter(0, mean);
 
-  cout<<"Rand : "<<rand<<" / min : "<<f->Eval(floor(mean/5))<<" / max : "<<f->Eval(ceil(mean)*5)<<endl;
+  double a = mean - 5*TMath::Sqrt(mean) < 0 ? 0 : mean - 5*TMath::Sqrt(mean);
+  double b = mean + 5*TMath::Sqrt(mean);
+  TF1 *f = new TF1("f", PoissonCdf, a, b, 1); // plutot faire en fonction des sigma
+  f->SetParameter(0, mean);
+  // TCanvas *canvas = new TCanvas("Nom_du_canvas", "Titre_du_canvas");
+  // f->Draw();
+  // canvas->Update();
+  // canvas->SaveAs("CDF.png");
+  // delete canvas;
 
   if(rand <= f->Eval(floor(mean/5))) return floor(mean/5);
   if(rand >= f->Eval(ceil(mean)*5)) return 5*ceil(mean);
-  cout<<"X : "<<f->GetX(rand)<<endl;
   return f->GetX(rand);
 }
 
@@ -86,21 +91,21 @@ double GetContinuousPoissonInt(double mean){
 void test(){
   
   double mean=10;
-  TH1F *histo1 = new TH1F("Distribution", "Distribution", 50, mean/2, 2*mean);
+  TH1F *histo1 = new TH1F("Distribution", "Distribution", 15, 0, 2*mean);
   TRandom3* rnd = new TRandom3();
   rnd->SetSeed(10111999);
   for(int i = 0; i<10000; i++){
     //histo1->Fill(GetContinuousPoisson(mean));
     histo1->Fill(GetContinuousPoissonCdf(mean, rnd->Uniform(0,1)));
   }
-  TF1 *f1 = new TF1("f", PoissonCdf, mean/2, 2*mean, 1);
+  TF1 *f1 = new TF1("f", ContinuousPoisson, 0, 2*mean, 1);
   f1->SetParameter(0, mean);
 
   TCanvas *canvas = new TCanvas("Nom_du_canvas", "Titre_du_canvas");
-  //histo1->Scale(1/histo1->Integral());
+  histo1->Scale(1/histo1->Integral());
   histo1->SetLineColor(kBlue);
   histo1->SetLineWidth(2);
-  histo1->Draw("HIST");
+  histo1->Draw("C");
   f1->SetLineColor(kGreen);
   f1->SetLineWidth(2);
   f1->Draw("SAME");

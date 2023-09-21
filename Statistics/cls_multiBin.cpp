@@ -27,6 +27,39 @@
 //#include <stdlib.h>
 
 
+Double_t PoissonCdf(Double_t *x, Double_t *params){
+  Double_t A = params[0];
+  Double_t arg = x[0];
+  return ROOT::Math::inc_gamma_c(arg+1, A);
+}
+
+double GetContinuousPoissonCdf(double mean, double rand){
+  double a = mean - 5*TMath::Sqrt(mean) < 0 ? 0 : mean - 5*TMath::Sqrt(mean);
+  double b = mean + 5*TMath::Sqrt(mean);
+  TF1 *f = new TF1("f", PoissonCdf, a, b, 1);
+
+  f->SetParameter(0, mean);
+
+  if(rand <= f->Eval(a)) return a;
+  if(rand >= f->Eval(b)) return b;
+  return f->GetX(rand);
+}
+
+Double_t ContinuousPoisson(Double_t *x, Double_t *params){
+  Double_t A = params[0];
+  if(A<=0) return 0;
+  Double_t arg = x[0];
+  return TMath::Exp(-A) * TMath::Power(A, arg) / TMath::Gamma(arg + 1);
+}
+
+double GetContinuousPoisson(double mean){
+  TF1 *f = new TF1("f", ContinuousPoisson, 0, 3*ceil(mean), 1);
+  f->SetParameter(0, mean);
+  double rand = f->GetRandom();
+  delete f;
+  return rand;
+}
+
 
 double* GetPoissonDistribution(double mean, int ntrials){
 
@@ -35,7 +68,8 @@ double* GetPoissonDistribution(double mean, int ntrials){
   double* P = new double[ntrials];
 
   for (int i=0; i<ntrials; i++){
-    P[i] = rnd->PoissonD(mean);
+    //P[i] = rnd->PoissonD(mean);
+    P[i] = GetContinuousPoissonCdf(mean, rnd->Uniform(0,1));
   }
 
   return P;
@@ -47,6 +81,9 @@ double* GetDataPoissonDistribution_Fluctuate(double N, double N_err, int ntrials
 
   double N_fluctuated;
 
+  // TH1F *histo = new TH1F("Distribution", "Distribution", 100, N-3*TMath::Sqrt(N), N+3*TMath::Sqrt(N));
+  // TH1F *histoG = new TH1F("DistributionGaus", "DistributionGaus", 100, N-3*N_err, N+3*N_err);
+
   TRandom3* rnd = new TRandom3();
   double* P = new double[ntrials];
 
@@ -57,9 +94,24 @@ double* GetDataPoissonDistribution_Fluctuate(double N, double N_err, int ntrials
       N_fluctuated = rnd->Gaus(N, N_err);
     }
 
-    P[i] = rnd->PoissonD(N_fluctuated);
+    //P[i] = rnd->PoissonD(N_fluctuated);
+    P[i] = GetContinuousPoissonCdf(N_fluctuated, rnd->Uniform(0,1));
+    // histo->Fill(P[i]);
+    // histoG->Fill(N_fluctuated);
 
   }
+  // TCanvas *canvas = new TCanvas("Nom_du_canvas", "Titre_du_canvas");
+  // histo->Draw("C");
+  // canvas->Update();
+  // TString nomFichier = Form("Poisson_Distribution_%.2f.png", N);
+  // canvas->SaveAs(nomFichier);
+  // histoG->Draw();
+  // canvas->Update();
+  // nomFichier = Form("Gauss_Distribution_%.2f.png", N);
+  // canvas->SaveAs(nomFichier);
+  // delete histo;
+  // delete histoG;
+  // delete canvas;
 
   return P;
 }
@@ -209,17 +261,17 @@ void SetXrange(TH1F*& h){
 }
 
 void DrawHist(TH1F* hH0, TH1F* hH1, double LLR_data, string name){
-  // hH0->Rebin(100000/100);
-  // hH1->Rebin(100000/100);
+  hH0->Rebin(100000/100);
+  hH1->Rebin(100000/100);
   hH0->SetTitle("Test Statistic");
   TCanvas* c1 = new TCanvas("canvas", "Canvas", 800, 600);
   double maxHist = TMath::Max(hH0->GetMaximum(), hH1->GetMaximum());
   hH0->SetMaximum(1.3 * maxHist);
   // I only do it for this one and not for the others. I could do a more sophisticated thing to take into account others but it is not very usefull
   SetXrange(hH0);
-  hH0->SetLineColor(kBlue);
+  hH0->SetLineColor(kGreen);
   hH0->SetLineWidth(2);
-  hH1->SetLineColor(kViolet);
+  hH1->SetLineColor(kRed);
   hH1->SetLineWidth(2);
   hH0->Draw("HIST C");
   hH1->Draw("HIST C SAME");
@@ -230,19 +282,19 @@ void DrawHist(TH1F* hH0, TH1F* hH1, double LLR_data, string name){
   TH1F* hH0_color;
   ColorBinsUp(hH1, hH1_color, LLR_data, kRed);
   ColorBinsDown(hH0, hH0_color, LLR_data, kGreen);
-  hH1_color->Draw("SAME C HIST");
-  hH0_color->Draw("SAME C HIST");
+  // hH1_color->Draw("SAME C HIST");
+  // hH0_color->Draw("SAME C HIST");
 
   TLine* line1 = new TLine(LLR_data, 0, LLR_data, maxHist);
   line1->SetLineColor(kBlack);
   line1->SetLineWidth(2);
   line1->Draw("SAME");
 
-  TLegend* legend = new TLegend(0.7, 0.7, 0.9, 0.9); // Coordonnées de la légende dans le canvas (x1, y1, x2, y2)
-  legend->AddEntry(hH0, "Expected for SM", "l"); // "l" signifie ligne, vous pouvez également utiliser "f" pour le remplissage
+  TLegend* legend = new TLegend(0.7, 0.7, 0.9, 0.9);
+  legend->AddEntry(hH0, "Expected for SM", "l");
   legend->AddEntry(hH1, "Expected for LIV", "l");
-  legend->AddEntry(hH0_color, "P(SM)", "f");
-  legend->AddEntry(hH1_color, "P(LIV)", "f");
+  // legend->AddEntry(hH0_color, "P(SM)", "f");
+  // legend->AddEntry(hH1_color, "P(LIV)", "f");
   legend->AddEntry(line1, "Observed (in SM-MC sample)", "l");
   legend->Draw();
 
@@ -259,8 +311,10 @@ double* GenerateToyExperiment_MultiChannels(double* Ns, double* Nb, double* Ndat
   double** GedankenExp_Bhyp = new double*[nChannels];
 
   for (int i=0; i<nChannels; i++){
+    cout<<"Channel "<<i<<" ...";
     GedankenExp_SBhyp[i] = GetPoissonDistribution(Ns[i], ntrials);
     GedankenExp_Bhyp[i] = GetPoissonDistribution(Nb[i], ntrials);
+    cout<<" DONE"<<endl;
   }
 
   TH1F* HistoGedankenExp_SBhyp = PlotGedankenExpMinus2LLR_MultiChannels("GedankenExp_SBhyp", GedankenExp_SBhyp, Ns, Nb, ntrials, nChannels);
@@ -334,7 +388,7 @@ double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, dou
 
 void cls_multiBin(){
     bool test = false;
-    int ntry=1000000;
+    int ntry=100000;
     gErrorIgnoreLevel = kError;
     // Fill the pseudo-histograms
     
@@ -342,13 +396,13 @@ void cls_multiBin(){
       int n = 2;
       double Ns[] = {9, 6};
       double Ns_err[] = {1, 2};
-      double Nb[] = {10, 10};
+      double Nb[] = {15, 10};
       double Nb_err[] = {3, 4};
       double Ndata[] = {9, 6};
       double Ndata_err[] = {3, 2};
 
       //GenerateToyExperiment_MultiChannels(Nb, Nb, Nb, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Ndata, n, ntry);
     }
     else{
       // double Ndata[] = {2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
@@ -456,15 +510,15 @@ void cls_multiBin(){
       // cout<<"\n#### Results for E=2500 ####"<<endl;
       // GenerateToyExperiment_MultiChannels(Ns_2500, Nb, Ndata, n, ntry);
       // //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
-      cout<<"\n#### Results for E=2300 ####"<<endl;
-      GenerateToyExperiment_MultiChannels(Ns_2300, Nb, Ndata, n, ntry);
+      //  cout<<"\n#### Results for E=2300 ####"<<endl;
+      //GenerateToyExperiment_MultiChannels(Ns_2300, Nb, Ndata, n, ntry);
       //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
       // cout<<"\n#### Results for E=2250 ####"<<endl;
       // GenerateToyExperiment_MultiChannels(Ns_2250, Nb, Ndata, n, ntry);
       // //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
-      // cout<<"\n#### Results for E=2225 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2225, Nb, Ndata, n, ntry);
-      // //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
+      cout<<"\n#### Results for E=2225 ####"<<endl;
+      GenerateToyExperiment_MultiChannels(Ns_2225, Nb, Ndata, n, ntry);
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2225, Nb, Ns_err, Nb_err, Nb, n, ntry);
       // cout<<"\n#### Results for E=2210 ####"<<endl;
       // GenerateToyExperiment_MultiChannels(Ns_2210, Nb, Ndata, n, ntry);
       // //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);

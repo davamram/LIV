@@ -8,6 +8,8 @@ namespace Rivet {
   class TEST_ANALYSIS : public Analysis {
   public:
 
+    double _sumOfWeights = 1.0;
+
     /// Constructor
     RIVET_DEFAULT_ANALYSIS_CTOR(TEST_ANALYSIS);
 
@@ -16,6 +18,8 @@ namespace Rivet {
 
       FinalState fs;
       declare(fs, "FS");
+      
+      srand((10111998));
 
       // Consider the final state jets for the energy density calculation
       FastJets fj(fs, FastJets::KT, 0.5);
@@ -62,13 +66,15 @@ namespace Rivet {
       FourMomentum Fermion;
       FourMomentum AntiFermion;
       // Veto events that wouldn't survived if they were LIV, and look for a missID electron
-      if(HasSurvived(leadingMomentum, Fermion, AntiFermion)==0 || HasSurvived(leadingMomentum, Fermion, AntiFermion)==10){
-        _h["mass"]->fill((Fermion+AntiFermion).mass());
+      int score = HasSurvived(leadingMomentum, Fermion, AntiFermion);
+      if(score==0 || score==10){
+        //_h["mass"]->fill((Fermion+AntiFermion).mass());
+        _h["mass"]->fill(leadingPhoton.momentum().mass());
         _h["theta"]->fill(Fermion.angle(AntiFermion));
+        _h["phi"]->fill(calcDeltaPhi(Fermion, AntiFermion));
         
       }
-      if(HasSurvived(leadingMomentum, Fermion, AntiFermion)==0) vetoEvent;
-
+      if(score==0) vetoEvent;
       // Veto events with photon in ECAL crack
       if (inRange(leadingMomentum.abseta(), 1.37, 1.56)) vetoEvent;
 
@@ -85,7 +91,6 @@ namespace Rivet {
       }
       // Remove the photon energy from the isolation
       mom_in_EtCone -= leadingMomentum;
-
       // Get the area-filtered jet inputs for computing median energy density, etc.
       vector<double> ptDensity;
       vector< vector<double> > ptDensities(_eta_bins_areaoffset.size()-1);
@@ -108,10 +113,13 @@ namespace Rivet {
       // Apply isolation cut on area-corrected value
       // cut is Etiso < 4.8GeV + 4.2E-03 * Et_gamma.
       if (mom_in_EtCone.Et() - correction > 4.8*GeV + 0.0042*leadingMomentum.Et()) vetoEvent;
+      // To normalize to ATLAS values
+      //_sumOfWeights += event.weight();
+      _sumOfWeights=1.0;
 
       // Fill histograms
       const size_t eta_bin = _getEtaBin(leadingMomentum.abseta(), false);
-      _h_Et_photon[eta_bin]->fill(leadingMomentum.Et());
+      _h_Et_photon[eta_bin]->fill(leadingMomentum.Et(), Reweight(leadingMomentum.Et()));
 
     }
 
@@ -122,7 +130,8 @@ namespace Rivet {
 	    // double IdentificationEfficiency=0.95; //Efficacite d'identification pour un photon
 	    // double ReconstructionEfficiency=0.70; //Efficacite de reconstruction pour un photon
       // double sf = crossSection() / (picobarn * sumOfWeights()) * TriggerEfficiency * IdentificationEfficiency * ReconstructionEfficiency;
-      double sf = crossSection() / (picobarn * sumOfWeights());
+      // double sf = crossSection() / (picobarn * sumOfWeights());
+      double sf = 1/_sumOfWeights;
       for (size_t i = 0; i < _eta_bins.size()-1; ++i) {
         if (fuzzyEquals(_eta_bins[i], 1.37)) continue;
         scale(_h_Et_photon[i], sf);
