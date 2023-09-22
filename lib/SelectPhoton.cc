@@ -9,7 +9,7 @@ double LIVParameter(int particule, Data d) //Revoie le parametre d'invariance de
 void initialize(Data &d) //Initialise les valeurs
 {
 	d.Identifier=8; //Indice de la particule dans Masses (ex : 0 pour un electron, 3 pour un quark up, etc.) 8 quark top ?
-	d.ThresholdEnergy=2300; //Energie seuil souhaitee pour la desintegration en GeV
+	d.ThresholdEnergy=1500; //Energie seuil souhaitee pour la desintegration en GeV
     d.mFermion=d.Masses[d.Identifier]; //Masse du fermion en GeV/c2
     d.KTr=LIVParameter(d.Identifier,d); //Parametre de violation de l'invariance de Lorentz //Ordre de grandeur : -1e-13 pour l'electron et -1e-2 pour le top
     d.hbar=1;
@@ -43,11 +43,28 @@ double integrate(Data d, double E, double a, double b)
 
     return integral;
 }
-// Analytical integral (it's just a polynomial in Ef)
-double CalcGamma(double E, double eb, double eh, Data d){
-    double num = d.alpha*((1-d.KTr)*(1+d.KTr)*d.mFermion*d.mFermion*(eh-eb)-d.KTr*E*E*(eh-eb)+(1-d.KTr)*(d.KTr*(E*(eh*eh-eb*eb)-2*(eh*eh*eh-eb*eb*eb)/3)));
+// Analytical primitive (it's just a polynomial in Ef)
+double PrimGamma(double E, double ef, Data d){
+    double num = d.alpha*((1-d.KTr)*(1+d.KTr)*d.mFermion*d.mFermion*(ef)-d.KTr*E*E*(ef)+(1-d.KTr)*(d.KTr*(E*(ef*ef)-2*(ef*ef*ef)/3)));
     double den = (1+d.KTr)*(1+d.KTr)*sqrt(1-d.KTr)*E*E;
     return num/den;
+}
+
+double CalcGamma(double E, double eb, double eh, Data d){
+    return PrimGamma(E, eh, d) - PrimGamma(E, eb, d);
+}
+
+// Return as random variable distributed following dGamma/dE
+double DrawEf(double E, double Eb, double Eh, Data d){
+    double X = (double)rand()/RAND_MAX;
+    double norm = CalcGamma(E, Eb, Eh, d);
+    double h = (Eh - Eb)/10000;
+    // Easy but do the trick. Maybe the precision is too high
+    while(Eb < Eh){
+        if(PrimGamma(E, Eb, d)/norm > X) return Eb;
+        Eb += h;
+    }
+    return Eh;
 }
 
 double partialwidth(double x, Data d, double E) //Formule de la largeur de desintegration partielle implementee pour etre utilisee avec TF1
@@ -140,7 +157,7 @@ int HasSurvived(Rivet::FourMomentum &momPhoton, Rivet::FourMomentum &Fermion, Ri
     double Draw = static_cast<double>(std::rand()) / RAND_MAX;
     if(Draw<1-SurvivalProb(Gamma, d.Distance[d.Distance.size()-1])){
         
-        double EFermion = (double)rand()/RAND_MAX*(EHaute-EBasse)+EBasse;
+        double EFermion = DrawEf(E, EBasse, EHaute, d);
         double EAntiFermion = E-EFermion;
         
         if(EFermion < 0 || EAntiFermion <0) cout<<"Error : Negative Energy. EBasse = "<<EBasse<<" | EHaute = "<<EHaute<<endl;
@@ -185,8 +202,8 @@ int HasSurvived(Rivet::FourMomentum &momPhoton, Rivet::FourMomentum &Fermion, Ri
 //This is done in the same way in ROOT for a TLorentzVector
 double calcDeltaPhi(Rivet::FourMomentum Fermion, Rivet::FourMomentum AntiFermion){
     double dPhi = Fermion.phi() - AntiFermion.phi();
-    while(dPhi > M_PI) dPhi -= 2*M_PI;
-    while(dPhi <= M_PI) dPhi += 2*M_PI;
+    while(dPhi >= M_PI) dPhi -= 2*M_PI;
+    while(dPhi < -M_PI) dPhi += 2*M_PI;
     return dPhi;
 }
 

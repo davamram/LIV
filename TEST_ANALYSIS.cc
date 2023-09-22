@@ -37,8 +37,8 @@ namespace Rivet {
         int offset = i > 2? 0 : 1;
         book(_h_Et_photon[i] ,i + offset, 1, 1);
       }
-      book(_h["theta"], "h_theta", 10, 0, M_PI);
-      book(_h["phi"], "h_phi", 10, 0, M_PI);
+      book(_h["theta"], "h_theta", 10, -M_PI, M_PI);
+      book(_h["phi"], "h_phi", 10, -M_PI, M_PI);
       book(_h["mass"], "h_mass", 100, 0.0, 1000);
 
     }
@@ -71,8 +71,7 @@ namespace Rivet {
         _h["mass"]->fill((Fermion+AntiFermion).mass());
         //_h["mass"]->fill(leadingPhoton.momentum().mass());
         _h["theta"]->fill(abs(Fermion.angle(AntiFermion)));
-        _h["phi"]->fill(abs(calcDeltaPhi(Fermion, AntiFermion)));
-        
+        _h["phi"]->fill(abs(calcDeltaPhi(Fermion, AntiFermion)));        
       }
       if(score==0) vetoEvent;
       // Veto events with photon in ECAL crack

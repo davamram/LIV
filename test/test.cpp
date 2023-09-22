@@ -55,14 +55,24 @@ double Gamma(double E, double eb, double eh, double etr){
     return num/den;
 }
 
+double IntGamma(double E, double ef, double etr){
+    double alpha = 1.0/137;
+    double k = LIVParameter(etr);
+    double m = 0.000511;
+    double num = alpha*((1-k)*(1+k)*m*m*(ef)-k*E*E*(ef)+(1-k)*(k*(E*(ef*ef)-2*(ef*ef*ef)/3)));
+    double den = (1+k)*(1+k)*sqrt(1-k)*E*E;
+    return num/den;
+}
+
 int main(){
 
-    double E=2000;
+    double E=3000;
     double etr=1900;
     double ebar=EBar(E,etr);
     std::cout<<"Ebar : "<<ebar<<std::endl;
     std::cout<<"Kappa : "<<LIVParameter(E)<<std::endl;
     std::cout<<"Gamma is : "<<integrate(E, 1.0/2*(E-ebar), 1.0/2*(E+ebar), etr)<<std::endl;
     std::cout<<"Gamma is also (analytique): "<<Gamma(E, 1.0/2*(E-ebar), 1.0/2*(E+ebar), etr)<<std::endl;
+    std::cout<<"Gamma is also this : "<<IntGamma(E, 1.0/2*(E+ebar), etr) - IntGamma(E, 1.0/2*(E-ebar), etr)<<std::endl;
     return 0;
 }
