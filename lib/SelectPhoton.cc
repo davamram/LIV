@@ -9,7 +9,7 @@ double LIVParameter(int particule, Data d) //Revoie le parametre d'invariance de
 void initialize(Data &d) //Initialise les valeurs
 {
 	d.Identifier=8; //Indice de la particule dans Masses (ex : 0 pour un electron, 3 pour un quark up, etc.) 8 quark top ?
-	d.ThresholdEnergy=1500; //Energie seuil souhaitee pour la desintegration en GeV
+	d.ThresholdEnergy=2300; //Energie seuil souhaitee pour la desintegration en GeV
     d.mFermion=d.Masses[d.Identifier]; //Masse du fermion en GeV/c2
     d.KTr=LIVParameter(d.Identifier,d); //Parametre de violation de l'invariance de Lorentz //Ordre de grandeur : -1e-13 pour l'electron et -1e-2 pour le top
     d.hbar=1;
@@ -42,6 +42,12 @@ double integrate(Data d, double E, double a, double b)
     }
 
     return integral;
+}
+// Analytical integral (it's just a polynomial in Ef)
+double CalcGamma(double E, double eb, double eh, Data d){
+    double num = d.alpha*((1-d.KTr)*(1+d.KTr)*d.mFermion*d.mFermion*(eh-eb)-d.KTr*E*E*(eh-eb)+(1-d.KTr)*(d.KTr*(E*(eh*eh-eb*eb)-2*(eh*eh*eh-eb*eb*eb)/3)));
+    double den = (1+d.KTr)*(1+d.KTr)*sqrt(1-d.KTr)*E*E;
+    return num/den;
 }
 
 double partialwidth(double x, Data d, double E) //Formule de la largeur de desintegration partielle implementee pour etre utilisee avec TF1
@@ -129,7 +135,7 @@ int HasSurvived(Rivet::FourMomentum &momPhoton, Rivet::FourMomentum &Fermion, Ri
 
     double EBasse = 0.5*(E-EBar(E,d)); //On determine les bornes d'intégration
     double EHaute = 0.5*(E+EBar(E,d));
-    double Gamma = integrate(d, E, EBasse, EHaute);
+    double Gamma = CalcGamma(E, EBasse, EHaute, d);
     
     double Draw = static_cast<double>(std::rand()) / RAND_MAX;
     if(Draw<1-SurvivalProb(Gamma, d.Distance[d.Distance.size()-1])){
@@ -179,16 +185,16 @@ int HasSurvived(Rivet::FourMomentum &momPhoton, Rivet::FourMomentum &Fermion, Ri
 //This is done in the same way in ROOT for a TLorentzVector
 double calcDeltaPhi(Rivet::FourMomentum Fermion, Rivet::FourMomentum AntiFermion){
     double dPhi = Fermion.phi() - AntiFermion.phi();
-    while(dPhi >= M_PI) dPhi -= 2*M_PI;
-    while(dPhi >= M_PI) dPhi -= 2*M_PI;
+    while(dPhi > M_PI) dPhi -= 2*M_PI;
+    while(dPhi <= M_PI) dPhi += 2*M_PI;
     return dPhi;
 }
 
 //Reweight to the ATALS mc values
 double Reweight(double Et){
     double x[16] = {1.500000e+02, 1.750000e+02, 2.000000e+02, 2.500000e+02, 3.000000e+02, 3.500000e+02, 4.000000e+02, 4.700000e+02, 5.500000e+02, 6.500000e+02, 7.500000e+02, 9.000000e+02, 1.100000e+03, 1.500000e+03, 2.000000e+03, 2.500000e+03};
-    double y[16] = {7.325364e+00, 3.855605e+00, 2.340599e+00, 8.497084e-01, 4.028668e-01, 1.205763e-01, 7.376434e-02, 3.242393e-02, 2.039166e-02, 7.092872e-03, 1.418749e-03, 9.462940e-04, 1.106280e-03, 2.564250e-05, 2.609998e-06, 2.222536e-07};
-    double AtlasValues[16] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06, 1.220970e-07}; 
+    double y[16] = {7.325364e+00, 3.855605e+00, 2.340599e+00, 8.497084e-01, 4.028668e-01, 1.205763e-01, 7.376434e-02, 3.242393e-02, 2.039166e-02, 7.092872e-03, 1.418749e-03, 9.462940e-04, 1.106280e-03, 2.564250e-05, 2.707898e-06, 1.168536e-06}; // Local sample SM-value
+    double AtlasValues[16] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06, 1.220970e-07};
     double weight;
     for(int i=0; i<16; i++){
         if(Et<x[i] || i==15){

@@ -91,7 +91,7 @@ def plot_and_interpolate(x, y):
     plt.axhline(y=0.05, color='gray', linestyle='--')
     plt.axvline(x=x_solution, color='green', linestyle='--')
 
-    #plt.text(2200, 0.06, r'$E_{tr} > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
+    plt.text(2100, 0.06, r'$E > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
     plt.legend()
     plt.savefig('plot_interpol_E.png')
     plt.show()
@@ -111,7 +111,7 @@ def plot_and_interpolate(x, y):
     plt.axhline(y=0.05, color='gray', linestyle='--')
     plt.axvline(x=k_solution, color='green', linestyle='--')
 
-    plt.text(-1.135e-13, 0.06, r'$\kappa > {:.3e}$'.format(k_solution), fontsize=12, color='purple', fontweight='bold')
+    plt.text(-1.155e-13, 0.06, r'$\kappa > {:.3e}$'.format(k_solution), fontsize=12, color='purple', fontweight='bold')
 
     #plt.text(2200, 0.06, r'$E_{tr} > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
     plt.legend()
@@ -121,7 +121,10 @@ def plot_and_interpolate(x, y):
 
 
 
-x_values = np.array([2300, 2250, 2225, 2210, 2200, 2175, 2150])
+# x_values = np.array([2300, 2250, 2225, 2210, 2200, 2175, 2150]) # First values
+x_values = np.array([2400, 2300, 2250, 2237, 2230, 2225, 2200, 2100]) # Second values (madgraph)
 
-y_values = np.array([0.258267, 0.186887, 0.168647, 0.126563, 0.0177835, 0.00588068, 0.00470678])
+# y_values = np.array([0.258267, 0.186887, 0.168647, 0.126563, 0.0177835, 0.00588068, 0.00470678]) # First presentation
+# y_values = np.array([0.176181, 0.154514, 0.151199, 0.11079, 0.0112652, 0.00278396, 0.00165911]) # First (sherpa 900GeV ?) velue with poisson continuous
+y_values = np.array([0.374682, 0.129847, 0.0634117, 0.050172, 0.045412, 0.0425831, 0.0251836, 0.000102955]) # Second values (madgraph 120/1000/2000)
 plot_and_interpolate(x_values, y_values)

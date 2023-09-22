@@ -36,6 +36,7 @@ struct Data{
 double integrate(std::function<double(double)> func, double a, double b, int numSteps);
 double LIVParameter(int particule, Data d);
 void initialize(Data &d);
+double CalcGamma(double E, double eb, double eh, Data d);
 double integrate(Data d, double E, double a, double b);
 double partialwidth(double x, Data d, double E);
 double Threshold(Data d);
