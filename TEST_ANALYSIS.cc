@@ -37,9 +37,9 @@ namespace Rivet {
         int offset = i > 2? 0 : 1;
         book(_h_Et_photon[i] ,i + offset, 1, 1);
       }
-      book(_h["theta"], "h_theta", 10, -M_PI, M_PI);
-      book(_h["phi"], "h_phi", 10, -M_PI, M_PI);
-      book(_h["mass"], "h_mass", 100, 0.0, 1000);
+      book(_h["theta"], "h_theta", 50, 0, M_PI);
+      book(_h["phi"], "h_phi", 50, 0, M_PI);
+      book(_h["mass"], "h_mass", 50, 0.0, 1000);
 
     }
 
@@ -68,10 +68,10 @@ namespace Rivet {
       // Veto events that wouldn't survived if they were LIV, and look for a missID electron
       int score = HasSurvived(leadingMomentum, Fermion, AntiFermion);
       if(score==0 || score==10){
-        _h["mass"]->fill((Fermion+AntiFermion).mass());
+        _h["mass"]->fill((Fermion+AntiFermion).mass(),Reweight(leadingMomentum.Et()));
         //_h["mass"]->fill(leadingPhoton.momentum().mass());
-        _h["theta"]->fill(abs(Fermion.angle(AntiFermion)));
-        _h["phi"]->fill(abs(calcDeltaPhi(Fermion, AntiFermion)));        
+        _h["theta"]->fill(abs(Fermion.angle(AntiFermion)), Reweight(leadingMomentum.Et()));
+        _h["phi"]->fill(abs(calcDeltaPhi(Fermion, AntiFermion)), Reweight(leadingMomentum.Et()));        
       }
       if(score==0) vetoEvent;
       // Veto events with photon in ECAL crack
