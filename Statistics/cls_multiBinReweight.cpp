@@ -166,7 +166,8 @@ double CalcLogLikelihoodRatioTrue(double Ndata, double Ns, double Nb){
 }
 
 double CalcLogLikelihoodRatio(double Ndata, double Ns, double Nb){
-
+  // If the bin value is 0, i should merge it xith the previous one. To discuss with Nicolas
+  // if(Nb==0 || Ns==0) cout<<"Bin value is 0. LLR impossible to compute. Setting bin value to 1e-15"<<endl;
   if(Nb==0) Nb=1e-15;
   if(Ns==0) Ns=1e-15;
   double llr = Nb-Ns+Ndata*log(Ns/Nb);
@@ -201,6 +202,7 @@ TH1F* PlotGedankenExpMinus2LLR_MultiChannels(string Name, double** GedankenExp, 
     LLR=0;
     for (int j=0; j<nChannels; j++){
       LLR += CalcLogLikelihoodRatio(GedankenExp[j][i], Ns[j], Nb[j]);
+      // if(LLR<-50) cout<<"Pseudo LLR : "<<LLR<<" with Ndata, Ns, Nb = "<<GedankenExp[j][i]<<" ; "<<Ns[j]<<" ; "<<Nb[j]<<endl;
     }
     GedankenExpMinus2LLR->Fill(-2*LLR);
   }
@@ -218,7 +220,7 @@ double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double*
   for (int i=0; i<nChannels; i++){
   
     LLR_data += CalcLogLikelihoodRatio(Ndata[i], Ns[i], Nb[i]);
-      //cout<<"LLR step is : "<<LLR_data<<" with Ndata, Ns, Nb = "<<Ndata[i]<<" ; "<<Ns[i]<<" ; "<<Nb[i]<<endl;
+    // cout<<"LLR step is in SB : "<<LLR_data<<" with Ndata, Ns, Nb = "<<Ndata[i]<<" ; "<<Ns[i]<<" ; "<<Nb[i]<<endl;
     
   }
 
@@ -241,7 +243,8 @@ double ComputeCL_MultiChannels_hypB(TH1F* HistoGedankenExp, double* Ns, double* 
   for (int i=0; i<nChannels; i++){
   
     LLR_data += CalcLogLikelihoodRatio(Ndata[i], Ns[i], Nb[i]);
-    
+    // cout<<"LLR step is in B : "<<LLR_data<<" with Ndata, Ns, Nb = "<<Ndata[i]<<" ; "<<Ns[i]<<" ; "<<Nb[i]<<endl;
+
   }
 
   double xmin = HistoGedankenExp->GetXaxis()->GetXmin();
@@ -435,7 +438,7 @@ void cls_multiBinReweight(){
     gROOT->SetBatch(kTRUE);
 
     bool test = false;
-    int ntry=100000;
+    int ntry=10000;
     gErrorIgnoreLevel = kError;
     // Fill the pseudo-histograms
     
@@ -467,10 +470,15 @@ void cls_multiBinReweight(){
 
       double Ndata[] = {2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
       double Ndata_err[] = {8.230996e-02, 3.598052e-02, 1.722778e-02, 7.057156e-03, 2.743396e-03, 1.133563e-03, 5.585615e-04, 2.722863e-04, 1.227772e-04, 5.432952e-05, 2.607210e-05, 1.193473e-05, 4.651671e-06, 1.256509e-06, 2.793959e-07, 1.267303e-07};
+      double Ndata_stat[] = {0.0060483, 0.00124098, 0.000875161, 0.000396898, 0.000243451, 0.000156815, 0.000108274, 6.29188e-05, 3.85399e-05, 2.22023e-05, 1.45279e-05, 7.53505e-06, 3.58288e-06, 1.11595e-06, 2.74616e-07, 1.262e-07};
 
       double Ns_2400[] = {2.224240e+00, 1.017430e+00, 5.141328e-01, 2.227860e-01, 8.262708e-02, 3.580690e-02, 1.729010e-02, 8.139827e-03, 3.521509e-03, 1.464270e-03, 6.108828e-04, 2.379368e-04, 7.349850e-05, 1.409705e-05, 1.395380e-06, 9.125426e-08};
       double N2400_err[] = {7.074313e-02, 4.497576e-02, 2.768121e-02, 1.581030e-02, 7.730480e-03, 7.547453e-03, 3.877605e-03, 2.543693e-03, 1.195816e-03, 8.785437e-04, 1.057928e-03, 3.362813e-04, 5.268441e-05, 1.021554e-07, 2.813266e-08, 2.251434e-09};
       double N2400_err_d[n]; double N2400_err_u[n];
+
+      double Ns_2350[] = {2.224240e+00, 1.017430e+00, 5.141328e-01, 2.227860e-01, 8.262708e-02, 3.580690e-02, 1.729010e-02, 8.139827e-03, 3.521509e-03, 1.464270e-03, 6.108828e-04, 2.379371e-04, 7.349855e-05, 1.409587e-05, 1.350726e-06, 2.218630e-08};
+      double N2350_err[] = {7.074313e-02, 4.497576e-02, 2.768121e-02, 1.581030e-02, 7.730480e-03, 7.547453e-03, 3.877605e-03, 2.543693e-03, 1.195816e-03, 8.785437e-04, 1.057928e-03, 3.362813e-04, 5.268441e-05, 1.021463e-07, 2.762138e-08, 1.368414e-09};
+      double N2350_err_d[n]; double N2350_err_u[n];
 
       double Ns_2300[] = {2.224240e+00, 1.017430e+00, 5.141328e-01, 2.227860e-01, 8.262708e-02, 3.580690e-02, 1.729010e-02, 8.139827e-03, 3.521509e-03, 1.464270e-03, 6.108828e-04, 2.379368e-04, 7.349850e-05, 1.409705e-05, 1.392217e-06, 6.819044e-08};
       double N2300_err[] = {7.074313e-02, 4.497576e-02, 2.768121e-02, 1.581030e-02, 7.730480e-03, 7.547453e-03, 3.877605e-03, 2.543693e-03, 1.195816e-03, 8.785437e-04, 1.057928e-03, 3.362813e-04, 5.268441e-05, 1.021554e-07, 2.810936e-08, 1.953369e-09};
@@ -538,120 +546,122 @@ void cls_multiBinReweight(){
 
         Ndata[i] *= factor;
         Ndata_err[i] *= factor;
+        Ndata_stat[i] *= factor;
         //cout<<"Ndata : "<<Ndata[i]<<endl;
 
 
         Nb[i] *=  factor;
         Nb_err[i] *= factor;
-        Nb_err_u[i] = sqrt( Nb_err[i]*Nb_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        Nb_err_d[i] = sqrt( Nb_err[i]*Nb_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        Nb_err_u[i] = sqrt( Nb_err[i]*Nb_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        Nb_err_d[i] = sqrt( Nb_err[i]*Nb_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
 
         cout<<"Nb : "<<Nb[i]<<" + "<<Nb_err_u[i]<<" - "<<Nb_err_d[i]<<endl;
 
         Ns_2400[i] *= factor;
         N2400_err[i] *=factor;
-        N2400_err_d[i] = sqrt( N2400_err[i]*N2400_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2400_err_u[i] = sqrt( N2400_err[i]*N2400_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2400_err_d[i] = sqrt( N2400_err[i]*N2400_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2400_err_u[i] = sqrt( N2400_err[i]*N2400_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2400 : "<<Ns_2400[i]<<" +- "<<N2400_err[i]<<endl;
 
         Ns_2300[i] *= factor;
         N2300_err[i] *= factor;
-        N2300_err_d[i] = sqrt( N2300_err[i]*N2300_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2300_err_u[i] = sqrt( N2300_err[i]*N2300_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2300_err_d[i] = sqrt( N2300_err[i]*N2300_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2300_err_u[i] = sqrt( N2300_err[i]*N2300_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2300 : "<<Ns_2300[i]<<" +- "<<N2300_err[i]<<endl;
 
         Ns_2250[i] *= factor;
         N2250_err[i] *= factor;
-        N2250_err_d[i] = sqrt( N2250_err[i]*N2250_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2250_err_u[i] = sqrt( N2250_err[i]*N2250_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2250_err_d[i] = sqrt( N2250_err[i]*N2250_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2250_err_u[i] = sqrt( N2250_err[i]*N2250_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2250 : "<<Ns_2250[i]<<" +- "<<N2250_err[i]<<endl;
 
         Ns_2237[i] *= factor;
         N2237_err[i] *= factor;
-        N2237_err_d[i] = sqrt( N2237_err[i]*N2237_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2237_err_u[i] = sqrt( N2237_err[i]*N2237_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2237_err_d[i] = sqrt( N2237_err[i]*N2237_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2237_err_u[i] = sqrt( N2237_err[i]*N2237_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2237 : "<<Ns_2237[i]<<" +- "<<N2237_err[i]<<"+- (tot) "<<N2237_err_d[i]<<endl;
 
         Ns_2230[i] *= factor;
         N2230_err[i] *= factor;
-        N2230_err_d[i] = sqrt( N2230_err[i]*N2230_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2230_err_u[i] = sqrt( N2230_err[i]*N2230_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2230_err_d[i] = sqrt( N2230_err[i]*N2230_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2230_err_u[i] = sqrt( N2230_err[i]*N2230_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2230 : "<<Ns_2230[i]<<" +- "<<N2230_err[i]<<endl;
 
         Ns_2225[i] *= factor;
         N2225_err[i] *= factor;
-        N2225_err_d[i] = sqrt( N2225_err[i]*N2225_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2225_err_u[i] = sqrt( N2225_err[i]*N2225_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2225_err_d[i] = sqrt( N2225_err[i]*N2225_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2225_err_u[i] = sqrt( N2225_err[i]*N2225_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2225 : "<<Ns_2225[i]<<" +- "<<N2225_err[i]<<endl;
 
         Ns_2200[i] *= factor;
         N2200_err[i] *= factor;
-        N2200_err_d[i] = sqrt( N2200_err[i]*N2200_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2200_err_u[i] = sqrt( N2200_err[i]*N2200_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2200_err_d[i] = sqrt( N2200_err[i]*N2200_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2200_err_u[i] = sqrt( N2200_err[i]*N2200_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2200 : "<<Ns_2200[i]<<" +- "<<N2200_err[i]<<endl;
 
         Ns_2100[i] *= factor;
         N2100_err[i] *= factor;
-        N2100_err_d[i] = sqrt( N2100_err[i]*N2100_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2100_err_u[i] = sqrt( N2100_err[i]*N2100_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2100_err_d[i] = sqrt( N2100_err[i]*N2100_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2100_err_u[i] = sqrt( N2100_err[i]*N2100_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         cout<<"Ns_2100 : "<<Ns_2100[i]<<" + "<<N2100_err_u[i]<<" - "<<N2100_err_d[i]<<endl;
 
         Ns_2050[i] *= factor;
         N2050_err[i] *= factor;
-        N2050_err_d[i] = sqrt( N2050_err[i]*N2050_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2050_err_u[i] = sqrt( N2050_err[i]*N2050_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2050_err_d[i] = sqrt( N2050_err[i]*N2050_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2050_err_u[i] = sqrt( N2050_err[i]*N2050_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2050 : "<<Ns_2050[i]<<" +- "<<N2050_err[i]<<endl;
 
         Ns_2025[i] *= factor;
         N2025_err[i] *= factor;
-        N2025_err_d[i] = sqrt( N2025_err[i]*N2025_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2025_err_u[i] = sqrt( N2025_err[i]*N2025_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2025_err_d[i] = sqrt( N2025_err[i]*N2025_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2025_err_u[i] = sqrt( N2025_err[i]*N2025_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2025 : "<<Ns_2025[i]<<" +- "<<N2025_err[i]<<endl;
 
         Ns_2000[i] *= factor;
         N2000_err[i] *= factor;
-        N2000_err_d[i] = sqrt( N2000_err[i]*N2000_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N2000_err_u[i] = sqrt( N2000_err[i]*N2000_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N2000_err_d[i] = sqrt( N2000_err[i]*N2000_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N2000_err_u[i] = sqrt( N2000_err[i]*N2000_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_2000 : "<<Ns_2000[i]<<" +- "<<N2000_err[i]<<endl;
 
         Ns_1900[i] *= factor;
         N1900_err[i] *= factor;
-        N1900_err_d[i] = sqrt( N1900_err[i]*N1900_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N1900_err_u[i] = sqrt( N1900_err[i]*N1900_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N1900_err_d[i] = sqrt( N1900_err[i]*N1900_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N1900_err_u[i] = sqrt( N1900_err[i]*N1900_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_1900 : "<<Ns_1900[i]<<" +- "<<N1900_err[i]<<endl;
 
         Ns_1500[i] *= factor;
         N1500_err[i] *= factor;
-        N1500_err_d[i] = sqrt( N1500_err[i]*N1500_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
-        N1500_err_u[i] = sqrt( N1500_err[i]*N1500_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] );
+        N1500_err_d[i] = sqrt( N1500_err[i]*N1500_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+        N1500_err_u[i] = sqrt( N1500_err[i]*N1500_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
         //cout<<"Ns_1500 : "<<Ns_1500[i]<<" +- "<<N1500_err[i]<<endl;
 
       }
-      cout<<"\n#### Results for E=2400 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2400, Nb, N2400_err_u, N2400_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2400");
-      cout<<"\n#### Results for E=2300 ####"<<endl;
+      // cout<<"\n#### Results for E=2400 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2400, Nb, N2400_err_u, N2400_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2400");
+      // cout<<"\n#### Results for E=2300 ####"<<endl;
       GenerateToyExperiment_MultiChannels_withSyst(Ns_2300, Nb, N2300_err_u, N2300_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2300");
       cout<<"\n#### Results for E=2250 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2250, Nb, N2250_err_u, N2250_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2250");
-      cout<<"\n#### Results for E=2237 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2237, Nb, N2237_err_u, N2237_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2237");
-      cout<<"\n#### Results for E=2230 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2230, Nb, N2230_err_u, N2230_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2230");
-      cout<<"\n#### Results for E=2225 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2225, Nb, N2225_err_u, N2225_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2225");
-      cout<<"\n#### Results for E=2200 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2200, Nb, N2200_err_u, N2200_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2200");
-      cout<<"\n#### Results for E=2100 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2100, Nb, N2100_err_u, N2100_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2100");
-      cout<<"\n#### Results for E=2050 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2050, Nb, N2050_err_u, N2050_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2050");
-      cout<<"\n#### Results for E=2025 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2025, Nb, N2025_err_u, N2025_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2025");
-      cout<<"\n#### Results for E=2000 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2000, Nb, N2000_err_u, N2000_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2000");
-      cout<<"\n#### Results for E=1900 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_1900, Nb, N1900_err_u, N1900_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "1900");
-      cout<<"\n#### Results for E=1500 ####"<<endl;
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_1500, Nb, N1500_err_u, N1500_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "1500");
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2250, Nb, N2250_err_u, N2250_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2250");
+      // cout<<"\n#### Results for E=2237 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2237, Nb, N2237_err_u, N2237_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2237");
+      // cout<<"\n#### Results for E=2230 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2230, Nb, N2230_err_u, N2230_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2230");
+      // cout<<"\n#### Results for E=2225 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2225, Nb, N2225_err_u, N2225_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2225");
+      // cout<<"\n#### Results for E=2200 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2200, Nb, N2200_err_u, N2200_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2200");
+      // cout<<"\n#### Results for E=2100 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2100, Nb, N2100_err_u, N2100_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2100");
+      // cout<<"\n#### Results for E=2050 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2050, Nb, N2050_err_u, N2050_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2050");
+      // cout<<"\n#### Results for E=2025 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2025, Nb, N2025_err_u, N2025_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2025");
+      // cout<<"\n#### Results for E=2000 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_2000, Nb, N2000_err_u, N2000_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "2000");
+      // cout<<"\n#### Results for E=1900 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_1900, Nb, N1900_err_u, N1900_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "1900");
+      // cout<<"\n#### Results for E=1500 ####"<<endl;
+      // GenerateToyExperiment_MultiChannels_withSyst(Ns_1500, Nb, N1500_err_u, N1500_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, "1500");
+
     }
 }

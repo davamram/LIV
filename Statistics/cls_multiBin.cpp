@@ -25,6 +25,10 @@
 #include <string.h>
 //#include <stdio.h>
 //#include <stdlib.h>
+#include <ctime>
+#include "ExtractValues.h"
+#include <Math/SpecFuncMathCore.h>
+
 
 
 Double_t PoissonCdf(Double_t *x, Double_t *params){
@@ -75,43 +79,78 @@ double* GetPoissonDistribution(double mean, int ntrials){
   return P;
 }
 
-double* GetDataPoissonDistribution_Fluctuate(double N, double N_err, int ntrials){
+double* GetDataPoissonDistribution_Fluctuate(double N, double N_err_u, double N_err_d, int ntrials, double Ndata){
 
   double mean;
 
-  double N_fluctuated;
+  double N_fluctuated_u; double N_fluctuated_d; double N_fluctuated;
+  
+  // TH1F *histo = new TH1F("Distribution", "Distribution", 100, N-5*TMath::Sqrt(N), N+5*TMath::Sqrt(N));
+  TH1F *histo = new TH1F("Distribution", "Distribution", 100, N/5, 3*N);
 
-  // TH1F *histo = new TH1F("Distribution", "Distribution", 100, N-3*TMath::Sqrt(N), N+3*TMath::Sqrt(N));
-  // TH1F *histoG = new TH1F("DistributionGaus", "DistributionGaus", 100, N-3*N_err, N+3*N_err);
+  TH1F *histoG = new TH1F("DistributionGaus", "DistributionGaus", 100, N-3*N_err_d, N+3*N_err_u);
 
-  TRandom3* rnd = new TRandom3();
+  TRandom3* rnd = new TRandom3(10111999);
   double* P = new double[ntrials];
+
+  double int_d = ROOT::Math::normal_cdf_c(0, N_err_d, N)-0.5;
+  double int_tot = ROOT::Math::normal_cdf_c(0, N_err_d, N);
+  double normFactor = int_d/int_tot;
 
   for (int i=0; i<ntrials; i++){
 
+    N_fluctuated_u=0;
+    N_fluctuated_d=0;
     N_fluctuated=0;
+
+    double draw = rnd->Uniform(0,1);
     while (N_fluctuated<=0){
-      N_fluctuated = rnd->Gaus(N, N_err);
+      do{
+        N_fluctuated_d = rnd->Gaus(N, N_err_d);
+      } while((N_fluctuated_d >= N || N_fluctuated_d <= 0) && N!=0);
+      do{
+        N_fluctuated_u = rnd->Gaus(N, N_err_u);
+      } while(N_fluctuated_u <= N);
+      // See detail in presentation -> This ensure that i have a continuous distribution
+      N_fluctuated = draw < normFactor ? N_fluctuated_d : N_fluctuated_u;
     }
 
     //P[i] = rnd->PoissonD(N_fluctuated);
+
     P[i] = GetContinuousPoissonCdf(N_fluctuated, rnd->Uniform(0,1));
-    // histo->Fill(P[i]);
-    // histoG->Fill(N_fluctuated);
+
+    histo->Fill(P[i]);
+    histoG->Fill(N_fluctuated);
 
   }
-  // TCanvas *canvas = new TCanvas("Nom_du_canvas", "Titre_du_canvas");
-  // histo->Draw("C");
-  // canvas->Update();
-  // TString nomFichier = Form("Poisson_Distribution_%.2f.png", N);
-  // canvas->SaveAs(nomFichier);
-  // histoG->Draw();
-  // canvas->Update();
-  // nomFichier = Form("Gauss_Distribution_%.2f.png", N);
-  // canvas->SaveAs(nomFichier);
-  // delete histo;
-  // delete histoG;
-  // delete canvas;
+  TCanvas *canvas = new TCanvas("Nom_du_canvas", "Titre_du_canvas");
+  TLegend *legend = new TLegend(0.7, 0.7, 0.9, 0.9);
+  TLine *mcLine = new TLine(N, 0, N, histo->GetMaximum());
+  TLine *dataLine = new TLine(Ndata, 0, Ndata, histo->GetMaximum());
+  mcLine->SetLineColor(kRed);
+  dataLine->SetLineColor(kGreen);
+  TString nameData = Form("N_data = %.2f", Ndata);
+  TString nameMC = Form("N_mc = %.2f", N);
+  legend->AddEntry(mcLine, nameMC, "l");
+  legend->AddEntry(dataLine, nameData, "l");
+  histo->Draw();
+  mcLine->Draw("SAME");
+  dataLine->Draw("SAME");
+  legend->Draw("SAME");
+  canvas->Update();
+  TString nomFichier = Form("Poisson/Poisson_Distribution_%.2f.png", N);
+  canvas->SaveAs(nomFichier);
+  histoG->Draw();
+  mcLine->Draw("SAME");
+  dataLine->Draw("SAME");
+  legend->Draw("SAME");
+  canvas->Update();
+  nomFichier = Form("Gauss/Gauss_Distribution_%.2f.png", N);
+  canvas->SaveAs(nomFichier);
+  canvas->Close();
+  delete histo;
+  delete histoG;
+  delete canvas;
 
   return P;
 }
@@ -130,7 +169,8 @@ double CalcLogLikelihoodRatioTrue(double Ndata, double Ns, double Nb){
 }
 
 double CalcLogLikelihoodRatio(double Ndata, double Ns, double Nb){
-
+  // If the bin value is 0, i should merge it xith the previous one. To discuss with Nicolas
+  // if(Nb==0 || Ns==0) cout<<"Bin value is 0. LLR impossible to compute. Setting bin value to 1e-15"<<endl;
   if(Nb==0) Nb=1e-15;
   if(Ns==0) Ns=1e-15;
   double llr = Nb-Ns+Ndata*log(Ns/Nb);
@@ -165,6 +205,7 @@ TH1F* PlotGedankenExpMinus2LLR_MultiChannels(string Name, double** GedankenExp, 
     LLR=0;
     for (int j=0; j<nChannels; j++){
       LLR += CalcLogLikelihoodRatio(GedankenExp[j][i], Ns[j], Nb[j]);
+      // if(LLR<-50) cout<<"Pseudo LLR : "<<LLR<<" with Ndata, Ns, Nb = "<<GedankenExp[j][i]<<" ; "<<Ns[j]<<" ; "<<Nb[j]<<endl;
     }
     GedankenExpMinus2LLR->Fill(-2*LLR);
   }
@@ -182,7 +223,7 @@ double ComputeCL_MultiChannels_hypSB(TH1F* HistoGedankenExp, double* Ns, double*
   for (int i=0; i<nChannels; i++){
   
     LLR_data += CalcLogLikelihoodRatio(Ndata[i], Ns[i], Nb[i]);
-      //cout<<"LLR step is : "<<LLR_data<<" with Ndata, Ns, Nb = "<<Ndata[i]<<" ; "<<Ns[i]<<" ; "<<Nb[i]<<endl;
+    // cout<<"LLR step is in SB : "<<LLR_data<<" with Ndata, Ns, Nb = "<<Ndata[i]<<" ; "<<Ns[i]<<" ; "<<Nb[i]<<endl;
     
   }
 
@@ -205,7 +246,8 @@ double ComputeCL_MultiChannels_hypB(TH1F* HistoGedankenExp, double* Ns, double* 
   for (int i=0; i<nChannels; i++){
   
     LLR_data += CalcLogLikelihoodRatio(Ndata[i], Ns[i], Nb[i]);
-    
+    // cout<<"LLR step is in B : "<<LLR_data<<" with Ndata, Ns, Nb = "<<Ndata[i]<<" ; "<<Ns[i]<<" ; "<<Nb[i]<<endl;
+
   }
 
   double xmin = HistoGedankenExp->GetXaxis()->GetXmin();
@@ -348,7 +390,9 @@ double* GenerateToyExperiment_MultiChannels(double* Ns, double* Nb, double* Ndat
   return result;
 }
 
-double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, double* Ns_err, double* Nb_err, double* Ndata, int nChannels, int ntrials, string Energie){
+double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, double* Ns_err_u, double* Ns_err_d, double* Nb_err_u, double* Nb_err_d, double* Ndata, int nChannels, int ntrials, string Energie){
+
+  clock_t start = clock();
 
   double* result = new double[3];
 
@@ -356,9 +400,8 @@ double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, dou
   double** GedankenExp_Bhyp = new double*[nChannels];
 
   for (int i=0; i<nChannels; i++){
-
-    GedankenExp_Bhyp[i] = GetDataPoissonDistribution_Fluctuate(Nb[i], Nb_err[i], ntrials);
-    GedankenExp_SBhyp[i] = GetDataPoissonDistribution_Fluctuate(Ns[i], Ns_err[i], ntrials);
+    GedankenExp_Bhyp[i] = GetDataPoissonDistribution_Fluctuate(Nb[i], Nb_err_u[i], Nb_err_d[i], ntrials, Ndata[i]);
+    GedankenExp_SBhyp[i] = GetDataPoissonDistribution_Fluctuate(Ns[i], Ns_err_u[i], Ns_err_d[i], ntrials, Ndata[i]);
 
   }
 
@@ -385,184 +428,81 @@ double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, dou
 
   delete [] GedankenExp_SBhyp;
   delete [] GedankenExp_Bhyp;
+  
+  double time;
+
+  cout << "Done in : " << (double)(clock() - start) / CLOCKS_PER_SEC << " s" << endl;
+
   return result;
 }
 
-void cls_multiBin(){
+void cls_multiBinReweight2(int eValue){
+
+    gROOT->SetBatch(kTRUE);
+    gSystem->Load("biblio.so");
+
+    //int eValue = 2050;
+
     bool test = false;
-    int ntry=100000;
+    int ntry=10000;
     gErrorIgnoreLevel = kError;
     // Fill the pseudo-histograms
-    
-    if(test){
-      int n = 2;
-      double Ns[] = {9, 6};
-      double Ns_err[] = {1, 2};
-      double Nb[] = {15, 10};
-      double Nb_err[] = {3, 4};
-      double Ndata[] = {9, 6};
-      double Ndata_err[] = {3, 2};
 
-      //GenerateToyExperiment_MultiChannels(Nb, Nb, Nb, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Ndata, n, ntry, "test");
+    //HepData Numbers
+    //Je pourrais faire des dictionnaires mais pas envie de perdre du temps pour ça
+    int n = 16;
+
+    double Atlas_down[] = {-7.827176e-02, -3.551370e-02, -1.697738e-02, -7.084197e-03, -2.575804e-03, -1.157590e-03, -5.549091e-04, -2.714763e-04, -1.185141e-04, -5.092944e-05, -2.129382e-05, -8.701203e-06, -2.891808e-06, -5.895342e-07, -7.166077e-08, -8.281072e-09};
+    double Atlas_up[] = {5.233613e-02, 2.433757e-02, 1.214272e-02, 5.235209e-03, 1.963962e-03, 8.571483e-04, 4.382003e-04, 2.079510e-04, 9.104776e-05, 3.976086e-05, 1.729810e-05, 7.207799e-06, 2.486231e-06, 5.904051e-07, 7.280856e-08, 9.336763e-09};
+    double Atlas_stat[] = {0.00295715, 0.00177455, 0.000834419, 0.000268998, 0.000112464, 6.68152e-05, 3.31831e-05, 1.32362e-05, 6.20673e-06, 2.69945e-06, 1.42323e-06, 5.45151e-07, 1.94116e-07, 3.17007e-08, 4.10542e-09, 5.15698e-10};
+
+    double Nb[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06, 1.220970e-07};
+    double Nb_err[] = {7.074313e-02, 4.497576e-02, 2.768121e-02, 1.581030e-02, 7.730480e-03, 7.547453e-03, 3.877605e-03, 2.543693e-03, 1.195816e-03, 8.785437e-04, 1.057928e-03, 3.362813e-04, 5.268441e-05, 1.021463e-07, 2.762140e-08, 1.643521e-09};
+    double Nb_err_d[n]; double Nb_err_u[n];
+
+    double Ndata[] = {2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
+    double Ndata_err[] = {8.230996e-02, 3.598052e-02, 1.722778e-02, 7.057156e-03, 2.743396e-03, 1.133563e-03, 5.585615e-04, 2.722863e-04, 1.227772e-04, 5.432952e-05, 2.607210e-05, 1.193473e-05, 4.651671e-06, 1.256509e-06, 2.793959e-07, 1.267303e-07};
+    double Ndata_stat[] = {0.0060483, 0.00124098, 0.000875161, 0.000396898, 0.000243451, 0.000156815, 0.000108274, 6.29188e-05, 3.85399e-05, 2.22023e-05, 1.45279e-05, 7.53505e-06, 3.58288e-06, 1.11595e-06, 2.74616e-07, 1.262e-07};
+
+    std::vector<double> values = getValues(eValue, 2);
+    std::vector<double> errs = getValues(eValue, 3);
+    if(values.size()!=n || errs.size()!=n) cout<<"Big problem"<<endl;
+    double Ns[n];
+    double Ns_err[n];
+    for (int i=0; i<n; i++){
+        Ns[i]=values[i];
+        Ns_err[i]=errs[i];
     }
-    else{
-      // double Ndata[] = {2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
-      // double Nb[] = {3.937259e-09, 1.476472e-08, 1.968630e-09, 4.921574e-09, 2.952944e-09, 0.000000e+00, 5.905888e-09, 9.843147e-09, 1.814830e-08, 2.829905e-08, 7.382361e-08, 2.167133e-07, 1.407718e-05, 8.503187e-06, 8.722506e-07, 7.657968e-08};
-      // double Nb_err[] = {3.682969e-09, 3.812235e-09, 1.392031e-09, 1.841484e-09, 1.392031e-09, 1.704883e-09, 2.088047e-09, 2.982924e-09, 4.489251e-09, 6.698586e-09, 1.218028e-08, 2.075701e-08, 5.633294e-08, 2.760972e-08, 7.937478e-09, 2.338654e-09};
-      // double Ns[] = {3.937259e-09, 1.476472e-08, 1.968630e-09, 4.921574e-09, 2.952944e-09, 0.000000e+00, 5.905888e-09, 9.843147e-09, 1.814830e-08, 2.829905e-08, 7.382361e-08, 2.167133e-07, 1.407718e-05, 8.503187e-06, 8.052680e-07, 0.000000e+00};
-      // double Ns_err[] = {3.682969e-09, 3.812235e-09, 1.392031e-09, 1.841484e-09, 1.392031e-09, 1.704883e-09, 2.088047e-09, 2.982924e-09, 4.489251e-09, 6.698586e-09, 1.218028e-08, 2.075701e-08, 5.633294e-08, 2.760972e-08, 7.629868e-09, 0.000000e+00};
-      
-      // MadGraph numbers
-      // int n = 5;
-      // double Ndata[] = {2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
-      // double Nb[] = {2.167133e-07, 1.407718e-05, 8.503187e-06, 8.722506e-07, 7.657968e-08};
-      // double Nb_err[] = {2.075701e-08, 5.633294e-08, 2.760972e-08, 7.937478e-09, 2.338654e-09};
-      // double Ns[] = {2.167133e-07, 1.407718e-05, 8.503187e-06, 8.052680e-07, 2.000000e-09};
-      // double Ns_err[] = {2.075701e-08, 5.633294e-08, 2.760972e-08, 7.629868e-09, 0.000000e+00};
+    double Ns_err_d[n]; double Ns_err_u[n];
+
+    double Energy_bin[] = {0.25e+02, 0.25e+02, 0.25e+02, 0.5e+02, 0.5e+02, 0.5e+02, 0.5e+02, 0.7e+02, 0.8e+02, 1e+02, 1e+02, 1.5e+02, 2e+02, 4e+02, 5e+02, 5e+02};
+    double luminosity = 36e03;
+    double factor;
+
+    for(int i = 0; i<n; i++){
+    // Convert in number of events and add systematics in quadrature
+    factor = Energy_bin[i]*luminosity;
+
+    Atlas_up[i] *= factor;
+    Atlas_down[i] *= factor;
+    Atlas_stat[i] *= factor;
+
+    Ndata[i] *= factor;
+    Ndata_err[i] *= factor;
+    Ndata_stat[i] *= factor;
 
 
-      //Sherpa Numbers
-      // int n = 3;
-      // double Nb[] = {1.338734e-05, 1.266060e-06, 1.477964e-07};
-      // double Ns_2500[] = {1.338734e-05, 1.266060e-06, 1.326916e-07};
-      // double Ns_2300[] = {1.338734e-05, 1.263655e-06, 8.951466e-08};
-      // double Ns_2250[] = {1.338734e-05, 1.248750e-06, 8.069736e-08};
-      // double Ns_2225[] = {1.338734e-05, 1.242728e-06, 7.839034e-08};
-      // double Ns_2210[] = {1.338734e-05, 1.240825e-06, 7.161214e-08};
-      // double Ns_2200[] = {1.338734e-05, 1.240299e-06, 3.974962e-08};
-      // double Ns_2175[] = {1.338734e-05, 1.239426e-06, 2.934004e-08};
-      // double Ns_2150[] = {1.338734e-05, 1.237207e-06, 2.755656e-08};
-      // double Ns_2000[] = {1.338734e-05, 1.101764e-06, 0.000000e+00};
-      // double Ns_1750[] = {1.338093e-05, 6.689896e-07, 0.000000e+00};
-      // double Ns_1500[] = {1.226143e-05, 0.000000e+00, 0.000000e+00};
+    Nb[i] *=  factor;
+    Nb_err[i] *= factor;
+    Nb_err_u[i] = sqrt( Nb_err[i]*Nb_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+    Nb_err_d[i] = sqrt( Nb_err[i]*Nb_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
 
-      //HepData Numbers
-      int n = 16;
-      double Nb[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06, 1.220970e-07};
-      double Nb_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08, 8.281072e-09};
-      
-      double Ndata[] = {2.284340e+00, 1.067280e+00, 5.424560e-01, 2.317930e-01, 8.713560e-02, 3.699980e-02, 1.789660e-02, 8.427990e-03, 3.592930e-03, 1.498080e-03, 6.316090e-04, 2.499870e-04, 7.636430e-05, 1.399750e-05, 1.098470e-06, 2.185840e-07};
-      
-      double Ns_2500[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06, 1.220970e-07*(1.326916e-07/1.477964e-07)};
-      double N2500_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08, 8.281072e-09*(1.326916e-07/1.477964e-07)};
-      
-      double Ns_2300[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06*(1.263655e-06/1.266060e-06), 1.220970e-07*(8.951466e-08/1.477964e-07)};
-      double N2300_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08*(1.263655e-06/1.266060e-06), 8.281072e-09*(8.951466e-08/1.477964e-07)};
+    Ns[i] *= factor;
+    Ns_err[i] *=factor;
+    Ns_err_d[i] = sqrt( Ns_err[i]*Ns_err[i] + Atlas_down[i]*Atlas_down[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
+    Ns_err_u[i] = sqrt( Ns_err[i]*Ns_err[i] + Atlas_up[i]*Atlas_up[i] + Ndata_err[i]*Ndata_err[i] - Atlas_stat[i]*Atlas_stat[i] - Ndata_stat[i]*Ndata_stat[i] );
 
-      double Ns_2250[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06*(1.248750e-06/1.266060e-06), 1.220970e-07*(8.069736e-08/1.477964e-07)};
-      double N2250_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08*(1.248750e-06/1.266060e-06), 8.281072e-09*(8.069736e-08/1.477964e-07)};
-      
-      double Ns_2225[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06*(1.242728e-06/1.266060e-06), 1.220970e-07*(7.839034e-08/1.477964e-07)};
-      double N2225_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08*(1.242728e-06/1.266060e-06), 8.281072e-09*(7.839034e-08/1.477964e-07)};
-
-      double Ns_2210[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06*(1.240825e-06/1.266060e-06), 1.220970e-07*(7.161214e-08/1.477964e-07)};
-      double N2210_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08*(1.240825e-06/1.266060e-06), 8.281072e-09*(7.161214e-08/1.477964e-07)};
-
-      double Ns_2200[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06*(1.240299e-06/1.266060e-06), 1.220970e-07*(3.974962e-08/1.477964e-07)};
-      double N2200_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08*(1.240299e-06/1.266060e-06), 8.281072e-09*(3.974962e-08/1.477964e-07)};
-      
-      double Ns_2175[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06*(1.239426e-06/1.266060e-06), 1.220970e-07*(2.934004e-08/1.477964e-07)};
-      double N2175_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08*(1.239426e-06/1.266060e-06), 8.281072e-09*(2.934004e-08/1.477964e-07)};
-      
-      double Ns_2150[] = {2.224240e+00, 1.017430e+00, 5.141330e-01, 2.227860e-01, 8.262710e-02, 3.580690e-02, 1.729010e-02, 8.139830e-03, 3.521510e-03, 1.464270e-03, 6.108830e-04, 2.379370e-04, 7.349860e-05, 1.409570e-05, 1.395380e-06*(1.237207e-06/1.266060e-06), 1.220970e-07*(2.755656e-08/1.477964e-07)};
-      double N2150_err[] = {7.827176e-02, 3.551370e-02, 1.697738e-02, 7.084197e-03, 2.575804e-03, 1.157590e-03, 5.549091e-04, 2.714763e-04, 1.185141e-04, 5.092944e-05, 2.129382e-05, 8.701203e-06, 2.891808e-06, 5.895342e-07, 7.166077e-08*(1.237207e-06/1.266060e-06), 8.281072e-09*(2.755656e-08/1.477964e-07)};
-
-
-      //Convert into a number of event
-      //double Energy_bin[] = {4e+02, 5e+02, 5e+02};
-
-      double Energy_bin[] = {0.25e+02, 0.25e+02, 0.25e+02, 0.5e+02, 0.5e+02, 0.5e+02, 0.5e+02, 0.7e+02, 0.8e+02, 1e+02, 1e+02, 1.5e+02, 2e+02, 4e+02, 5e+02, 5e+02};
-      double luminosity = 36e03;
-      double factor;
-
-      for(int i = 0; i<n; i++){
-
-        factor = Energy_bin[i]*luminosity;
-        Ndata[i] *= factor;
-        cout<<"Ndata : "<<Ndata[i]<<endl;
-        // Ns[i] *=  factor;
-        // cout<<"Ns : "<<Ns[i]<<endl;
-        Nb[i] *=  factor;
-        Nb_err[i] *= factor;
-        cout<<"Nb : "<<Nb[i]<<" +- "<<Nb_err[i]<<endl;
-        Ns_2500[i] *= factor;
-        N2500_err[i] *=factor;
-        cout<<"Ns_2500 : "<<Ns_2500[i]<<" +- "<<N2500_err[i]<<endl;
-        Ns_2300[i] *= factor;
-        N2300_err[i] *= factor;
-        cout<<"Ns_2300 : "<<Ns_2300[i]<<" +- "<<N2300_err[i]<<endl;
-        Ns_2250[i] *= factor;
-        N2250_err[i] *= factor;
-        cout<<"Ns_2250 : "<<Ns_2250[i]<<" +- "<<N2250_err[i]<<endl;
-        Ns_2210[i] *= factor;
-        N2210_err[i] *= factor;
-        cout<<"Ns_2210 : "<<Ns_2210[i]<<" +- "<<N2210_err[i]<<endl;
-        Ns_2200[i] *= factor;
-        N2200_err[i] *= factor;
-        cout<<"Ns_2200 : "<<Ns_2200[i]<<" +- "<<N2200_err[i]<<endl;
-        Ns_2225[i] *= factor;
-        N2225_err[i] *= factor;
-        cout<<"Ns_2225 : "<<Ns_2225[i]<<" +- "<<N2250_err[i]<<endl;
-        Ns_2175[i] *= factor;
-        N2175_err[i] *= factor;
-        cout<<"Ns_2175 : "<<Ns_2175[i]<<" +- "<<N2175_err[i]<<endl;
-        Ns_2150[i] *= factor;
-        N2150_err[i] *= factor;
-        cout<<"Ns_2150 : "<<Ns_2150[i]<<" +- "<<N2150_err[i]<<endl;
-        // Ns_2000[i] *= factor;
-        // cout<<"Ns_2000 : "<<Ns_2000[i]<<endl;
-        // Ns_1750[i] *= factor;
-        // cout<<"Ns_1750 : "<<Ns_1750[i]<<endl;
-        // Ns_1500[i] *= factor;
-        // cout<<"Ns_1500 : "<<Ns_1500[i]<<endl;
-        // Nb_err[i] *= factor;
-        // Ns_err[i] *= factor;
-
-      }
-      // cout<<"\n#### Results for Ns ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns, Nb, Nb, n, ntry);
-      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
-      // cout<<"\n#### Results for Nb ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns, Nb, Ndata, n, ntry);
-      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
-      cout<<"\n#### Results for E=2500 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2500, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2500, Nb, N2500_err, Nb_err, Ndata, n, ntry, "2500");
-      cout<<"\n#### Results for E=2300 ####"<<endl;
-      //GenerateToyExperiment_MultiChannels(Ns_2300, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2300, Nb, N2300_err, Nb_err, Ndata, n, ntry, "2300");
-      cout<<"\n#### Results for E=2250 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2250, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2250, Nb, N2250_err, Nb_err, Ndata, n, ntry, "2250");
-      cout<<"\n#### Results for E=2225 ####"<<endl;
-      //GenerateToyExperiment_MultiChannels(Ns_2225, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2225, Nb, N2225_err, Nb_err, Ndata, n, ntry, "2225");
-      cout<<"\n#### Results for E=2210 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2210, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2210, Nb, N2210_err, Nb_err, Ndata, n, ntry, "2210");
-      cout<<"\n#### Results for E=2200 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2200, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2200, Nb, N2200_err, Nb_err, Ndata, n, ntry, "2200");
-      cout<<"\n#### Results for E=2175 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2175, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2175, Nb, N2175_err, Nb_err, Ndata, n, ntry, "2175");
-      cout<<"\n#### Results for E=2150 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2150, Nb, Ndata, n, ntry);
-      GenerateToyExperiment_MultiChannels_withSyst(Ns_2150, Nb, N2150_err, Nb_err, Ndata, n, ntry, "2150");
-      // cout<<"\n#### Results for E=2000 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_2000, Nb, Nb, n, ntry);
-      //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
-      // cout<<"\n#### Results for E=1750 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_1750, Nb, Nb, n, ntry);
-      // //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
-      // cout<<"\n#### Results for E=1500 ####"<<endl;
-      // GenerateToyExperiment_MultiChannels(Ns_1500, Nb, Nb, n, ntry);
-      // //GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, ntry);
     }
-
-    // GenerateToyExperiment_MultiChannels(Ns, Nb, Ndata, n, 100000);
-    // GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Ndata, n, 100000);
-    // GenerateToyExperiment_MultiChannels(Ns, Nb, Nb, n, 100000);
-    // GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err, Nb_err, Nb, n, 100000);
+    cout<<"\n#### Results for E="+to_string(eValue)+" ####"<<endl;
+    GenerateToyExperiment_MultiChannels_withSyst(Ns, Nb, Ns_err_u, Ns_err_d, Nb_err_u, Nb_err_d, Ndata, n, ntry, to_string(eValue));
 }

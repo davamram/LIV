@@ -1,0 +1,15 @@
+
+Processing cls_multiBinReweight2.cpp(2300)...
+
+#### Results for E=2300 ####
+
+******************************
+Experience avec Signal modifié (Fluctuation)
+******************************
+LLR is : -1.23681
+CLb=0.081 S=0.11
+CLsb=0.0137
+CLs=CLsb/CLb=0.169136
+min : 50
+max : 54
+Done in : 64.2979 s

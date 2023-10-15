@@ -2,6 +2,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import interpolate
 from scipy.optimize import bisect
+import os
+
+
+def getCls():
+    path = "results/"
+    files = os.listdir(path)
+    cls_values=[]
+    energie_values=[]
+    for file in files:
+        with open(path+file, 'r') as f:
+            lines = f.readlines()
+            
+        line_12 = lines[11]
+        line_4 = lines[3]
+        cls_values.append(float(line_12[13:]))
+        energie_values.append(float(line_4[19:23]))
+    print(energie_values, cls_values)
+    return([energie_values, cls_values])
 
 def plot_and_fit(x_values, k_values, y_values):
 
@@ -124,11 +142,11 @@ def plot_and_interpolate(x, y):
 # x_values = np.array([2300, 2250, 2225, 2210, 2200, 2175, 2150]) # First values
 x_values = np.array([2400, 2300, 2250, 2237, 2230, 2225, 2200, 2100]) # Second values (madgraph)
 x_values = np.array([2400, 2300, 2250, 2237, 2230, 2225, 2200, 2100, 2050, 2025, 2000]) # Third values (Data uncertainties)
-
+x_values = np.array(getCls()[0])
 
 # y_values = np.array([0.258267, 0.186887, 0.168647, 0.126563, 0.0177835, 0.00588068, 0.00470678]) # First presentation
 # y_values = np.array([0.176181, 0.154514, 0.151199, 0.11079, 0.0112652, 0.00278396, 0.00165911]) # First (sherpa 900GeV ?) velue with poisson continuous
 y_values = np.array([0.374682, 0.129847, 0.0634117, 0.050172, 0.045412, 0.0425831, 0.0251836, 0.000102955]) # Second values (madgraph 120/1000/2000)
-y_values = np.array([0.817519, 0.701785, 0.645179, 0.630829, 0.623124, 0.616745, 0.589449, 0.497264, 0.434349, 0.446913, 0]) # Third values (Data uncertainties)
-
+y_values = np.array([0.390181, 0.151625, 0.0928074, 0.0662857, 0.0552424, 0.048478, 0.0281215, 0.0020202, 0.00102249, 0.00104254, 0]) # Third values (Data uncertainties)
+y_values = np.array(getCls()[1])
 plot_and_interpolate(x_values, y_values)
