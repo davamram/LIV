@@ -44,4 +44,14 @@ Avant d'exécuter ce code, assurez-vous d'avoir les éléments suivants install�
 3. Lancer le calcul CLs avec root : 
 ```root -l -q "cls_multiBin.cpp($value)" >> results/cls_etr_$value.txt```
 
-4. 
+4. Test
+<pre>
+```cpp
+#include <iostream>
+
+int main() {
+    std::cout << "Hello, world!" << std::endl;
+    return 0;
+}
+```
+</pre>
