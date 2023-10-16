@@ -32,26 +32,12 @@ Avant d'exécuter ce code, assurez-vous d'avoir les éléments suivants install�
 ```cd Statistic```
 
 2. Changer le filePath dans le fichier Tools/ExtractValues.cpp
-<pre>
 ```cpp
     std::string filePath = "/home/amram/Documents/LorentzPhotons/Rivet/LIV/Plots/Sherpa/Reweight/" + std::to_string(energy) + "GeV/TEST_ANALYSIS/d01-x01-y01.dat";
 ```
-</pre>
 
 3. Recompiler la librairie :
 ```g++ -shared -o biblio.so Tools/ExtractValues.cpp -fPIC `root-config --cflags --glibs` ```
 
 3. Lancer le calcul CLs avec root : 
 ```root -l -q "cls_multiBin.cpp($value)" >> results/cls_etr_$value.txt```
-
-4. Test
-<pre>
-```cpp
-#include <iostream>
-
-int main() {
-    std::cout << "Hello, world!" << std::endl;
-    return 0;
-}
-```
-</pre>
