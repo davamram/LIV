@@ -48,7 +48,7 @@ std::string extractSecondColumn(const std::string& filePath, int col) {
 
 std::vector<double> getValues(int energy, int num) {
 
-    std::string filePath = "/home/amram/Documents/LorentzPhotons/Rivet/LIV/Plots/MadGraph/Reweight/" + std::to_string(energy) + "GeV/TEST_ANALYSIS/d01-x01-y01.dat";
+    std::string filePath = "/home/amram/Documents/LorentzPhotons/Rivet/LIV/Plots/Sherpa/Reweight/" + std::to_string(energy) + "GeV/TEST_ANALYSIS/d01-x01-y01.dat";
     // num : 2 for values, 3 for errors
     std::string result = extractSecondColumn(filePath, num);
 

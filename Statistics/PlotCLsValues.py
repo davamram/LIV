@@ -18,7 +18,6 @@ def getCls():
         line_4 = lines[3]
         cls_values.append(float(line_12[13:]))
         energie_values.append(float(line_4[19:23]))
-    print(energie_values, cls_values)
     return([energie_values, cls_values])
 
 def plot_and_fit(x_values, k_values, y_values):
@@ -129,7 +128,7 @@ def plot_and_interpolate(x, y):
     plt.axhline(y=0.05, color='gray', linestyle='--')
     plt.axvline(x=k_solution, color='green', linestyle='--')
 
-    plt.text(-1.155e-13, 0.06, r'$\kappa > {:.3e}$'.format(k_solution), fontsize=12, color='purple', fontweight='bold')
+    plt.text(-1.305e-13, 0.06, r'$\kappa > {:.3e}$'.format(k_solution), fontsize=12, color='purple', fontweight='bold')
 
     #plt.text(2200, 0.06, r'$E_{tr} > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
     plt.legend()

@@ -436,7 +436,7 @@ double* GenerateToyExperiment_MultiChannels_withSyst(double* Ns, double* Nb, dou
   return result;
 }
 
-void cls_multiBinReweight2(int eValue){
+void cls_multiBin(int eValue){
 
     gROOT->SetBatch(kTRUE);
     gSystem->Load("biblio.so");
