@@ -303,8 +303,8 @@ void SetXrange(TH1F*& h){
 }
 
 void DrawHist(TH1F* hH0, TH1F* hH1, double LLR_data, string name){
-  hH0->Rebin(100000/100);
-  hH1->Rebin(100000/100);
+  // hH0->Rebin(100000/100);
+  // hH1->Rebin(100000/100);
   hH0->SetTitle("Test Statistic");
   TCanvas* c1 = new TCanvas("canvas", "Canvas", 800, 600);
   double maxHist = TMath::Max(hH0->GetMaximum(), hH1->GetMaximum());
@@ -324,8 +324,8 @@ void DrawHist(TH1F* hH0, TH1F* hH1, double LLR_data, string name){
   TH1F* hH0_color;
   ColorBinsUp(hH1, hH1_color, LLR_data, kRed);
   ColorBinsDown(hH0, hH0_color, LLR_data, kGreen);
-  // hH1_color->Draw("SAME C HIST");
-  // hH0_color->Draw("SAME C HIST");
+  hH1_color->Draw("SAME C HIST");
+  hH0_color->Draw("SAME C HIST");
 
   TLine* line1 = new TLine(LLR_data, 0, LLR_data, maxHist);
   line1->SetLineColor(kBlack);
@@ -444,7 +444,7 @@ void cls_multiBin(int eValue){
     //int eValue = 2050;
 
     bool test = false;
-    int ntry=10000;
+    int ntry=100000;
     gErrorIgnoreLevel = kError;
     // Fill the pseudo-histograms
 

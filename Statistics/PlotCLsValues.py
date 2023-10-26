@@ -112,6 +112,7 @@ def plot_and_interpolate(x, y):
     plt.text(2100, 0.06, r'$E > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
     plt.legend()
     plt.savefig('plot_interpol_E.png')
+    plt.savefig('plot_interpol_E.pdf')
     plt.show()
 
     # For Kappa
@@ -122,18 +123,19 @@ def plot_and_interpolate(x, y):
 
     plt.plot(k, y, 'o', label='CLs values')
     plt.plot(k_new, y_new, '-', label='Interpolation')
-    plt.xlabel(r'$\kappa$')
+    plt.xlabel(r'$\tilde{{\kappa}}_{{tr}}$')
     plt.ylabel('CLs')
-    plt.title('Limit on kappa')
+    plt.title('Limit on ' + r'$\tilde{{\kappa}}_{{tr}}$')
     plt.legend()
     plt.axhline(y=0.05, color='gray', linestyle='--')
     plt.axvline(x=k_solution, color='green', linestyle='--')
 
-    plt.text(-1.155e-13, 0.06, r'$\kappa > {:.3e}$'.format(k_solution), fontsize=12, color='purple', fontweight='bold')
+    plt.text(-1.30e-13, 0.06, r'$\tilde{{\kappa}}_{{tr}} > {:.3e}$'.format(k_solution), fontsize=12, color='purple', fontweight='bold')
 
     #plt.text(2200, 0.06, r'$E_{tr} > {:.3e}$'.format(x_solution), fontsize=12, color='purple', fontweight='bold')
     plt.legend()
     plt.savefig('plot_interpol_K.png')
+    plt.savefig('plot_interpol_K.pdf')
     plt.show()
 
 

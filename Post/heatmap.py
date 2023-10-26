@@ -137,13 +137,13 @@ def PlotProba(m, Etr, name):
         k = calcKappa(Etr, m)
         gamma = Gamma(m, k, eg)
         P=[exp(-gamma*x*5.07e9) for x in X]
-        plt.plot(X, P, label="Probability for $E_\\gamma$ = {}".format(eg))
+        plt.plot(X/1000, P, label="$E_\\gamma$ = {} GeV".format(eg))
 
-    plt.xlabel('Distance ($\\mu$ m)')
+    plt.xlabel('Distance (mm)')
     plt.ylabel('Probability')
-    plt.title('Probability of disintegration for Etr = {}'.format(Etr))
+    #plt.title('Probability of disintegration for Etr = {}'.format(Etr))
     plt.legend()
-    plt.savefig('Plots/post/proba/{}/proba_{}.png'.format(name, Etr))
+    plt.savefig('Plots/{}/proba_{}.pdf'.format(name, Etr))
     plt.clf()
     
 
